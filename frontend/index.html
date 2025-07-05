@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的部落格</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 導航欄 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2><i class="fas fa-blog"></i> 我的部落格</h2>
+            </div>
+            <div class="nav-menu">
+                <a href="#posts" class="nav-link">貼文版</a>
+                <a href="#qa" class="nav-link">問答</a>
+                <a href="#about" class="nav-link">關於</a>
+            </div>
+            <div class="nav-auth">
+                <button id="loginBtn" class="btn btn-outline">登入</button>
+                <button id="registerBtn" class="btn btn-primary">註冊</button>
+                <div id="userMenu" class="user-menu" style="display: none;">
+                    <span id="username"></span>
+                    <button id="logoutBtn" class="btn btn-small">登出</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容 -->
+    <main class="main-content">
+        <!-- 英雄區塊 -->
+        <section class="hero">
+            <div class="hero-content">
+                <h1>歡迎來到我的部落格</h1>
+                <p>分享技術、生活、想法的空間</p>
+                <button class="btn btn-large btn-primary">開始探索</button>
+            </div>
+        </section>
+
+        <!-- 貼文版 -->
+        <section id="posts" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2><i class="fas fa-newspaper"></i> 最新貼文</h2>
+                    <button id="newPostBtn" class="btn btn-primary">發布新貼文</button>
+                </div>
+                <div id="postsContainer" class="posts-grid">
+                    <!-- 貼文會在這裡動態載入 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 問答區塊 -->
+        <section id="qa" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2><i class="fas fa-question-circle"></i> 問答區</h2>
+                    <button id="newQuestionBtn" class="btn btn-primary">提出問題</button>
+                </div>
+                <div id="qaContainer" class="qa-grid">
+                    <!-- 問答會在這裡動態載入 -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 登入模態框 -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>登入</h2>
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginUserEmail">電子郵件</label>
+                    <input type="text" id="loginUserEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">密碼</label>
+                    <input type="password" id="loginPassword" name="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">登入</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 註冊模態框 -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>註冊</h2>
+            <form id="registerForm" class="auth-form">
+                <div class="form-group">
+                    <label for="registerUsername">用戶名</label>
+                    <input type="text" id="registerUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">電子郵件</label>
+                    <input type="email" id="registerEmail" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">密碼</label>
+                    <input type="password" id="registerPassword" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">確認密碼</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">註冊</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 新貼文模態框 -->
+    <div id="newPostModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>發布新貼文</h2>
+            <form id="newPostForm" class="post-form">
+                <div class="form-group">
+                    <label for="postTitle">標題</label>
+                    <input type="text" id="postTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="postContent">內容</label>
+                    <textarea id="postContent" name="content" rows="8" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">發布</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 新問題模態框 -->
+    <div id="newQuestionModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>提出問題</h2>
+            <form id="newQuestionForm" class="question-form">
+                <div class="form-group">
+                    <label for="questionTitle">問題標題</label>
+                    <input type="text" id="questionTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="questionContent">問題描述</label>
+                    <textarea id="questionContent" name="content" rows="6" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">提出問題</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html> 

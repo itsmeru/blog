@@ -24,14 +24,14 @@ class Account(models.Model):
 
     
     def set_password(self, password):
-        salt = os.urandom(32)
+        salt = os.urandom(16)  # 改為 16 bytes
         password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
         self.password = salt.hex() + password_hash.hex()
 
     def check_password(self, password):
         stored_data = bytes.fromhex(self.password)
-        salt = stored_data[:16]
-        stored_hash = stored_data[16:]
+        salt = stored_data[:16]  # 前 16 bytes 是鹽值
+        stored_hash = stored_data[16:]  # 剩餘的是雜湊值
         input_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
         return stored_hash == input_hash
         

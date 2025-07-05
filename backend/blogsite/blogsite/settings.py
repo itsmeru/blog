@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders',
     'accounts',
 ]
 
@@ -123,5 +124,5 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True  # 開發環境使用，生產環境要設定具體域名
 CORS_ALLOW_CREDENTIALS = True
 
-# 自定義使用者模型
-AUTH_USER_MODEL = 'accounts.Account'
+# 使用 Django 內建用戶模型（用於管理員）
+# AUTH_USER_MODEL = 'accounts.Account'
