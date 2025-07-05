@@ -139,21 +139,26 @@ def generate_token(account):
 
     return access_token, refresh_token
 
+@csrf_exempt
+@require_http_methods(["GET"])
 def refresh_token(request):
     refresh_token = request.COOKIES.get('refresh_token')
     if not refresh_token:
         return JsonResponse({'error': 'No refresh token'}, status=401)
     try:
         payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=['HS256'])
-        user_id = Account.objects.get(id=payload.get('user_id'))
-        access_token, refresh_token = generate_token(user_id)
+        account = Account.objects.get(id=payload.get('user_id'))
+        access_token, new_refresh_token = generate_token(account)
         response = JsonResponse({'access_token': access_token})
         response.set_cookie(
             'refresh_token',
-            refresh_token,
+            new_refresh_token,
             httponly=True,
+            max_age=60 * 60 * 24 * 7
         )
         return response
+    except Account.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=401)
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, jwt.DecodeError, jwt.InvalidSignatureError):
         # 所有 JWT 相關錯誤統一處理
         return JsonResponse({'error': 'Invalid or expired token'}, status=401)

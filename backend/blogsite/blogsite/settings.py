@@ -120,9 +120,9 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS 設定
-CORS_ALLOW_ALL_ORIGINS = True  # 開發環境使用，生產環境要設定具體域名
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:5500",
+]
 
-# 使用 Django 內建用戶模型（用於管理員）
-# AUTH_USER_MODEL = 'accounts.Account'
+CORS_ALLOW_CREDENTIALS = True

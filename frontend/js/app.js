@@ -1,10 +1,14 @@
-// 應用程式主類
 class BlogApp {
     constructor() {
-        this.init();
+        this.init().catch(error => {
+            console.error('應用初始化失敗:', error);
+        });
     }
 
-    init() {
+    async init() {
+        // 先檢查登入狀態
+        await AuthManager.checkAuthStatus();
+        
         this.setupEventListeners();
         this.updateAuthUI();
         this.loadInitialData();
@@ -259,8 +263,7 @@ class BlogApp {
 
         try {
             const response = await API.login(credentials);
-            
-            AuthManager.setToken(response.token);
+            AuthManager.setAccessToken(response.access_token);
             
             this.updateAuthUI();
             this.hideModal('loginModal');

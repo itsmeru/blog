@@ -1,5 +1,5 @@
 // API 基礎配置
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 // API 工具類
 class API {
@@ -12,10 +12,9 @@ class API {
             },
         };
 
-        // 如果有 token，添加到 headers
-        const token = localStorage.getItem('token');
-        if (token) {
-            defaultOptions.headers['Authorization'] = `Bearer ${token}`;
+        // 如果有 access token，添加到 headers
+        if (AuthManager.getAccessToken()) {
+            defaultOptions.headers['Authorization'] = `Bearer ${AuthManager.getAccessToken()}`;
         }
 
         const config = {
@@ -30,6 +29,26 @@ class API {
         try {
             const response = await fetch(url, config);
             const data = await response.json();
+
+            // 如果 token 過期，嘗試刷新
+            if (response.status === 401 && AuthManager.getAccessToken()) {
+                try {
+                    await this.refreshToken();
+                    // 重新發送請求
+                    config.headers['Authorization'] = `Bearer ${AuthManager.getAccessToken()}`;
+                    const retryResponse = await fetch(url, config);
+                    const retryData = await retryResponse.json();
+                    
+                    if (!retryResponse.ok) {
+                        throw new Error(retryData.message || '請求失敗');
+                    }
+                    return retryData;
+                } catch (refreshError) {
+                    // 刷新失敗，清除 token 並跳轉到登入
+                    AuthManager.logout();
+                    throw new Error('登入已過期，請重新登入');
+                }
+            }
 
             if (!response.ok) {
                 throw new Error(data.message || '請求失敗');
@@ -51,14 +70,41 @@ class API {
     }
 
     static async login(credentials) {
-        return this.request('/auth/login/', {
+        const response = await fetch(`${API_BASE_URL}/auth/login/`, {
             method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(credentials),
+            credentials: 'include',
         });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || '登入失敗');
+        }
+
+        // 設置 access token
+        AuthManager.setAccessToken(data.access_token);
+        return data;
     }
 
-    static async getProfile() {
-        return this.request('/auth/profile/');
+    static async refreshToken() {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh-token/`, {
+            method: 'GET',
+            credentials: 'include', // 包含 cookies
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Token 刷新失敗');
+        }
+
+        // 更新 access token
+        AuthManager.setAccessToken(data.access_token);
+        return data;
     }
 
     // 貼文 API
@@ -134,25 +180,58 @@ class API {
 
 // 認證管理
 class AuthManager {
+    static accessToken = null;
+    
+    static setAccessToken(token) {
+        this.accessToken = token;
+    }
+    
+    static getAccessToken() {
+        return this.accessToken;
+    }
+    
+    static clearAccessToken() {
+        this.accessToken = null;
+    }
+    
     static isAuthenticated() {
-        return !!localStorage.getItem('token');
+        return !!this.accessToken;
     }
 
-    static getToken() {
-        return localStorage.getItem('token');
-    }
+    // 檢查並恢復登入狀態
+    static async checkAuthStatus() {
+        try {
+            console.log('檢查登入狀態...');
+            // 嘗試刷新 token 來檢查登入狀態
+            const response = await fetch(`${API_BASE_URL}/auth/refresh-token/`, {
+                method: 'GET',
+                credentials: 'include', // 包含 cookies
+            });
 
-    static setToken(token) {
-        localStorage.setItem('token', token);
-    }
+            console.log('Refresh token 響應狀態:', response.status);
 
-    static removeToken() {
-        localStorage.removeItem('token');
+            if (response.ok) {
+                const data = await response.json();
+                console.log('成功獲取新的 access token');
+                this.setAccessToken(data.access_token);
+                return true;
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                console.log('Refresh token 失敗:', errorData);
+                this.clearAccessToken();
+                return false;
+            }
+        } catch (error) {
+            console.log('檢查登入狀態失敗:', error);
+            this.clearAccessToken();
+            return false;
+        }
     }
 
     static logout() {
-        this.removeToken();
-        this.removeUser();
+        this.clearAccessToken();
+        // 清除 refresh token cookie
+        document.cookie = 'refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         window.location.reload();
     }
 }
