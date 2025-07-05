@@ -150,19 +150,6 @@ class AuthManager {
         localStorage.removeItem('token');
     }
 
-    static getUser() {
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
-    }
-
-    static setUser(user) {
-        localStorage.setItem('user', JSON.stringify(user));
-    }
-
-    static removeUser() {
-        localStorage.removeItem('user');
-    }
-
     static logout() {
         this.removeToken();
         this.removeUser();

@@ -6,4 +6,5 @@ django-cors-headers==4.7.0
 djangorestframework==3.16.0
 jwt==1.4.0
 pycparser==2.22
+PyJWT==2.10.1
 sqlparse==0.5.3

@@ -1,10 +1,14 @@
+from datetime import datetime, timedelta
+import jwt
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+
+from blogsite import settings
 from .models import Account
 
-# Create your views here.
 @csrf_exempt
 @require_http_methods(["POST"])
 def register(request):
@@ -48,11 +52,6 @@ def register(request):
         return JsonResponse({
             'success': True,
             'message': '註冊成功',
-            'user': {
-                'id': account.id,
-                'username': account.username,
-                'email': account.email
-            }
         })
         
     except json.JSONDecodeError as e:
@@ -101,22 +100,16 @@ def login(request):
                 'message': '用戶名或密碼錯誤'
             }, status=401)
         
-        # 生成簡單的 token（這裡可以改用 JWT）
-        import hashlib
-        import time
-        token_data = f"{account.username}{account.id}{time.time()}"
-        token = hashlib.sha256(token_data.encode()).hexdigest()
-        
-        return JsonResponse({
-            'success': True,
-            'message': '登入成功',
-            'token': token,
-            'user': {
-                'id': account.id,
-                'username': account.username,
-                'email': account.email
-            }
-        })
+        access_token, refresh_token = generate_token(account)
+        respnse = JsonResponse({'access_token': access_token})
+        respnse.set_cookie(
+            'refresh_token',
+            refresh_token,
+            httponly=True,
+            # secure=settings.DEBUG,
+            max_age=60 * 60 * 24 * 7
+        )
+        return respnse
         
     except json.JSONDecodeError:
         return JsonResponse({
@@ -129,15 +122,40 @@ def login(request):
             'message': f'登入失敗: {str(e)}'
         }, status=500)
 
-@require_http_methods(["GET"])
-def profile(request):
-    # 這裡需要實現 token 驗證
-    # 暫時返回測試數據
-    return JsonResponse({
-        'success': True,
-        'user': {
-            'id': 1,
-            'username': 'test_user',
-            'email': 'test@example.com'
-        }
-    })
+
+def generate_token(account):
+    access_payload = {
+        'user_id': account.id,
+        'username': account.username,
+        'exp': datetime.utcnow() + timedelta(minutes=30)
+    }
+    access_token = jwt.encode(access_payload, settings.SECRET_KEY, algorithm='HS256')
+
+    refresh_payload = {
+        'user_id': account.id,
+        'exp': datetime.utcnow() + timedelta(days=7)
+    }
+    refresh_token = jwt.encode(refresh_payload, settings.SECRET_KEY, algorithm='HS256')
+
+    return access_token, refresh_token
+
+def refresh_token(request):
+    refresh_token = request.COOKIES.get('refresh_token')
+    if not refresh_token:
+        return JsonResponse({'error': 'No refresh token'}, status=401)
+    try:
+        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=['HS256'])
+        user_id = Account.objects.get(id=payload.get('user_id'))
+        access_token, refresh_token = generate_token(user_id)
+        response = JsonResponse({'access_token': access_token})
+        response.set_cookie(
+            'refresh_token',
+            refresh_token,
+            httponly=True,
+        )
+        return response
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, jwt.DecodeError, jwt.InvalidSignatureError):
+        # 所有 JWT 相關錯誤統一處理
+        return JsonResponse({'error': 'Invalid or expired token'}, status=401)
+    
+   

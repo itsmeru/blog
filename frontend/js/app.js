@@ -148,10 +148,6 @@ class BlogApp {
             registerBtn.style.display = 'none';
             userMenu.style.display = 'flex';
             
-            const user = AuthManager.getUser();
-            if (user) {
-                usernameSpan.textContent = user.username;
-            }
         } else {
             loginBtn.style.display = 'inline-block';
             registerBtn.style.display = 'inline-block';
@@ -265,14 +261,11 @@ class BlogApp {
             const response = await API.login(credentials);
             
             AuthManager.setToken(response.token);
-            AuthManager.setUser(response.user);
             
             this.updateAuthUI();
             this.hideModal('loginModal');
             alert('登入成功！');
             
-            // 重新載入數據
-            this.loadInitialData();
         } catch (error) {
             console.log(error.message || '登入失敗');
         }
