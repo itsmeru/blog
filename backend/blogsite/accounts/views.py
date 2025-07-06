@@ -164,3 +164,10 @@ def refresh_token(request):
         return JsonResponse({'error': 'Invalid or expired token'}, status=401)
     
    
+@csrf_exempt
+@require_http_methods(["POST"])
+def logout(request):
+    response = JsonResponse({'message': 'Logout successfully'})
+    response.delete_cookie('refresh_token', path='/')
+    print("logout 登出")
+    return response

@@ -10,6 +10,7 @@ class BlogApp {
         await AuthManager.checkAuthStatus();
         
         this.setupEventListeners();
+        this.setupSearchEvents();
         this.updateAuthUI();
         this.loadInitialData();
     }
@@ -41,7 +42,7 @@ class BlogApp {
         // 新貼文按鈕
         document.getElementById('newPostBtn').addEventListener('click', () => {
             if (!AuthManager.isAuthenticated()) {
-                console.log('請先登入');
+                alert('請先登入');
                 return;
             }
             this.showModal('newPostModal');
@@ -122,6 +123,21 @@ class BlogApp {
         });
     }
 
+    setupSearchEvents() {
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        searchBtn.addEventListener('click', () => {
+            const keyword = searchInput.value.trim();
+            this.loadPosts(1, keyword);
+        });
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const keyword = searchInput.value.trim();
+                this.loadPosts(1, keyword);
+            }
+        });
+    }
+
     // 顯示模態框
     showModal(modalId) {
         document.getElementById(modalId).style.display = 'block';
@@ -172,13 +188,16 @@ class BlogApp {
     }
 
     // 載入貼文
-    async loadPosts() {
+    async loadPosts(page = 1, keyword = '') {
         const container = document.getElementById('postsContainer');
         LoadingManager.show(container);
 
         try {
-            const result = await API.getPosts();
+            const params = { page };
+            if (keyword) params.keyword = keyword;
+            const result = await API.getPosts(params);
             this.renderPosts(result.posts);
+            this.renderPagination(result.current_page, result.num_pages, keyword);
         } catch (error) {
             container.innerHTML = '<p>載入貼文失敗</p>';
             console.log('載入貼文失敗');
@@ -209,6 +228,41 @@ class BlogApp {
         `).join('');
 
         container.innerHTML = postsHTML;
+    }
+
+    // 分頁渲染
+    renderPagination(currentPage, numPages, keyword = '') {
+        const container = document.getElementById('pagination');
+        container.innerHTML = '';
+
+        if (numPages <= 1) {
+            container.style.display = 'none';
+            return;
+        }
+        container.style.display = 'block';
+
+        // 上一頁
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '上一頁';
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => this.loadPosts(currentPage - 1, keyword);
+        container.appendChild(prevBtn);
+
+        // 頁碼
+        for (let i = 1; i <= numPages; i++) {
+            const btn = document.createElement('button');
+            btn.textContent = i;
+            btn.disabled = i === currentPage;
+            btn.onclick = () => this.loadPosts(i, keyword);
+            container.appendChild(btn);
+        }
+
+        // 下一頁
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = '下一頁';
+        nextBtn.disabled = currentPage === numPages;
+        nextBtn.onclick = () => this.loadPosts(currentPage + 1, keyword);
+        container.appendChild(nextBtn);
     }
 
     // 載入問題
@@ -268,6 +322,7 @@ class BlogApp {
             this.updateAuthUI();
             this.hideModal('loginModal');
             alert('登入成功！');
+            window.location.reload();
             
         } catch (error) {
             console.log(error.message || '登入失敗');

@@ -108,8 +108,9 @@ class API {
     }
 
     // 貼文 API
-    static async getPosts() {
-        return this.request('/posts/get/');
+    static async getPosts(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.request(`/posts/get/?${query}`);
     }
 
     static async createPost(postData) {
@@ -235,10 +236,15 @@ class AuthManager {
         }
     }
 
-    static logout() {
+    static async logout() {
+        console.log("logout");
         this.clearAccessToken();
         // 清除 refresh token cookie
-        document.cookie = 'refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        await fetch(`${API_BASE_URL}/auth/logout/`,{
+            method: 'POST',
+            credentials: 'include',
+        })
+        
         window.location.reload();
     }
 }
