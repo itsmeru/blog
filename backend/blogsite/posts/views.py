@@ -1,8 +1,7 @@
 import json
+import base64
 
 from accounts.utils import login_check
-from django.core.paginator import Paginator
-from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -23,51 +22,109 @@ def posts_handler(request):
 @login_check
 @require_http_methods(["POST"])
 def create_post(request):
-    data = json.loads(request.body)
-    title = data.get("title")
-    content = data.get("content")
-    author = request.account
-    Post.objects.create(title=title, content=content, author=author)
-    return JsonResponse({"message": "Post created successfully"})
+    try:
+        # 處理表單資料
+        title = request.POST.get("title")
+        content = request.POST.get("content")
+        tags = request.POST.get("tags", "")
+        image_file = request.FILES.get("image")
+        author = request.account
+        
+        # 處理圖片
+        image_data = None
+        image_type = None
+        if image_file:
+            image_data = image_file.read()
+            image_type = image_file.content_type
+            print("圖片類型:", image_type)
+            print("圖片大小:", len(image_data), "bytes")
+        
+        # 創建貼文
+        post = Post.objects.create(
+            title=title,
+            content=content,
+            tags=tags,
+            image=image_data,
+            image_type=image_type,
+            author=author
+        )
+        
+        return JsonResponse({
+            "message": "Post created successfully",
+            "post_id": post.id
+        })
+    except Exception as e:
+        return JsonResponse({"message": f"Error creating post: {str(e)}"}, status=400)
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
 def get_posts(request):
     page = request.GET.get("page", 1)
-    page_size = request.GET.get("page_size", 3)
+    size = request.GET.get("size", 3)
     keyword = request.GET.get("keyword", "")
     order_by = request.GET.get("order", "desc")
     order_by = "-created_at" if order_by == "desc" else "created_at"
-    posts = Post.objects.all()
 
-    if keyword:
-        posts = posts.filter(
-            Q(title__icontains=keyword) | Q(content__icontains=keyword)
-        )
+    posts_page = Post.get_posts(page, size, keyword, order_by)
 
-    posts = posts.order_by(order_by)
-    paginator = Paginator(posts, page_size)
-
-    posts_page = paginator.get_page(page)
-
-    posts_data = [
-        {
+    posts_data = []
+    for post in posts_page:
+        image_data = None
+        if post.image and isinstance(post.image, bytes):
+            try:
+                image_data = f"data:{post.image_type};base64,{base64.b64encode(post.image).decode('utf-8')}"
+            except Exception as e:
+                print(f"圖片編碼錯誤: {e}")
+                image_data = None
+        
+        posts_data.append({
             "id": post.id,
             "title": post.title,
             "content": post.content,
+            "tags": post.tags,
+            "image": image_data,
+            "author": post.author.username,
+            "created_at": (
+                post.created_at.strftime("%Y-%m-%d %H:%M") if post.created_at else None
+            ),
+        })
+    
+    # 從 posts_page 取得分頁資訊
+    return JsonResponse(
+        {
+            "posts": posts_data,
+            "total": posts_page.paginator.count,
+            "num_pages": posts_page.paginator.num_pages,
+            "current_page": posts_page.number,
+        }
+    )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_post(request, post_id):
+    try:
+        post = Post.objects.get(id=post_id)
+        image_data = None
+        if post.image and isinstance(post.image, bytes):
+            try:
+                image_data = f"data:{post.image_type};base64,{base64.b64encode(post.image).decode('utf-8')}"
+            except Exception as e:
+                print(f"圖片編碼錯誤: {e}")
+                image_data = None
+        
+        post_data = {
+            "id": post.id,
+            "title": post.title,
+            "content": post.content,
+            "tags": post.tags,
+            "image": image_data,
             "author": post.author.username,
             "created_at": (
                 post.created_at.strftime("%Y-%m-%d %H:%M") if post.created_at else None
             ),
         }
-        for post in posts_page
-    ]
-    return JsonResponse(
-        {
-            "posts": posts_data,
-            "total": paginator.count,
-            "num_pages": paginator.num_pages,
-            "current_page": posts_page.number,
-        }
-    )
+        return JsonResponse(post_data)
+    except Post.DoesNotExist:
+        return JsonResponse({"message": "Post not found"}, status=404)

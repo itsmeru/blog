@@ -104,6 +104,12 @@ class BlogApp {
             e.preventDefault();
             await this.handleCreateQuestion();
         });
+
+        // 圖片上傳預覽
+        this.setupImageUpload();
+        
+        // 標籤選擇效果
+        this.setupTagSelection();
     }
 
     // 導航事件
@@ -161,13 +167,11 @@ class BlogApp {
         const loginBtn = document.getElementById('loginBtn');
         const registerBtn = document.getElementById('registerBtn');
         const userMenu = document.getElementById('userMenu');
-        const usernameSpan = document.getElementById('username');
 
         if (AuthManager.isAuthenticated()) {
             loginBtn.style.display = 'none';
             registerBtn.style.display = 'none';
             userMenu.style.display = 'flex';
-            
         } else {
             loginBtn.style.display = 'inline-block';
             registerBtn.style.display = 'inline-block';
@@ -196,11 +200,11 @@ class BlogApp {
             const params = { page };
             if (keyword) params.keyword = keyword;
             const result = await API.getPosts(params);
+            this.currentPosts = result.posts; // 儲存貼文資料
             this.renderPosts(result.posts);
             this.renderPagination(result.current_page, result.num_pages, keyword);
         } catch (error) {
             container.innerHTML = '<p>載入貼文失敗</p>';
-            console.log('載入貼文失敗');
         } finally {
             LoadingManager.hide(container);
         }
@@ -214,6 +218,8 @@ class BlogApp {
             container.innerHTML = '<p>目前沒有貼文</p>';
             return;
         }
+        console.log(posts);
+        
 
         const postsHTML = posts.map(post => `
             <div class="post-card">
@@ -222,8 +228,12 @@ class BlogApp {
                     <span>作者: ${post.author || '匿名'}</span>
                     <span>發布時間: ${post.created_at}</span>
                 </div>
-                <p>${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
-                <button class="btn btn-primary" onclick="app.viewPost(${post.id})">閱讀更多</button>
+                ${post.tags ? `<div class="post-tags">${post.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
+                ${post.image ? `<div class="post-image"><img src="${post.image}" alt="${post.title}" class="post-img"></div>` : ''}
+                <div class="post-content" id="post-content-${post.id}">
+                    <p>${post.content.substring(0, 30)}${post.content.length > 30 ? '...' : ''}</p>
+                </div>
+                ${post.content.length > 30 ? `<button class="btn btn-primary" onclick="app.togglePostContent(${post.id})" id="toggle-btn-${post.id}">閱讀更多</button>` : ''}
             </div>
         `).join('');
 
@@ -275,7 +285,6 @@ class BlogApp {
             this.renderQuestions(questions);
         } catch (error) {
             container.innerHTML = '<p>載入問題失敗</p>';
-            console.log('載入問題失敗');
         } finally {
             LoadingManager.hide(container);
         }
@@ -297,7 +306,7 @@ class BlogApp {
                     <span>提問者: ${question.author || '匿名'}</span>
                     <span>提問時間: ${new Date(question.created_at).toLocaleDateString()}</span>
                 </div>
-                <p>${question.content.substring(0, 150)}${question.content.length > 150 ? '...' : ''}</p>
+                <p>${question.content.substring(0, 2)}${question.content.length > 2 ? '...' : ''}</p>
                 <button class="btn btn-primary" onclick="app.viewQuestion(${question.id})">查看回答</button>
             </div>
         `).join('');
@@ -322,7 +331,9 @@ class BlogApp {
             this.updateAuthUI();
             this.hideModal('loginModal');
             alert('登入成功！');
-            window.location.reload();
+            
+            // 重新載入資料而不是重新整理頁面
+            this.loadInitialData();
             
         } catch (error) {
             console.log(error.message || '登入失敗');
@@ -338,7 +349,7 @@ class BlogApp {
         const confirmPassword = formData.get('confirmPassword');
         
         if (password !== confirmPassword) {
-            console.log('密碼確認不匹配');
+            alert('密碼確認不匹配');
             return;
         }
 
@@ -363,15 +374,36 @@ class BlogApp {
         const form = document.getElementById('newPostForm');
         const formData = new FormData(form);
         
-        const postData = {
-            title: formData.get('title'),
-            content: formData.get('content')
-        };
+        // 收集選中的標籤
+        const selectedTags = [];
+        const checkboxes = form.querySelectorAll('input[name="tags"]:checked');
+        checkboxes.forEach(checkbox => {
+            selectedTags.push(checkbox.value);
+        });
+        
+        // 收集自訂標籤
+        const customTags = formData.get('customTag');
+        console.log(customTags);
+        
+        if (customTags) {
+            const customTagArray = customTags.split(',').map(tag => tag.trim()).filter(tag => tag);
+            selectedTags.push(...customTagArray);
+        }
+        
+        // 建立 FormData 物件
+        const postFormData = new FormData();
+        postFormData.append('title', formData.get('title'));
+        postFormData.append('content', formData.get('content'));
+        postFormData.append('tags', selectedTags.join(','));
+        
+        // 添加圖片（如果有的話）
+        const imageFile = formData.get('image');
+        if (imageFile && imageFile.size > 0) {
+            postFormData.append('image', imageFile);
+        }
 
         try {
-            let res = await API.createPost(postData);
-            console.log(res.message);
-            
+            let res = await API.createPost(postFormData);            
             this.hideModal('newPostModal');
             alert('貼文發布成功！');
             
@@ -405,17 +437,156 @@ class BlogApp {
         }
     }
 
-    // 查看貼文詳情
-    viewPost(postId) {
-        // 這裡可以實現查看貼文詳情的功能
-        console.log('查看貼文:', postId);
+    // 圖片上傳預覽功能
+    setupImageUpload() {
+        const imageInput = document.getElementById('postImage');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const removeImageBtn = document.getElementById('removeImage');
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        removeImageBtn.addEventListener('click', () => {
+            imageInput.value = '';
+            imagePreview.style.display = 'none';
+            previewImg.src = '';
+        });
+    }
+
+    // 標籤選擇效果
+    setupTagSelection() {
+        const tagOptions = document.querySelectorAll('.tag-option');
+        
+        tagOptions.forEach(option => {
+            const checkbox = option.querySelector('input[type="checkbox"]');
+            const label = option.querySelector('.tag-label');
+            
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    option.style.background = '#667eea';
+                    option.style.borderColor = '#667eea';
+                    label.style.color = 'white';
+                    label.style.fontWeight = '600';
+                } else {
+                    option.style.background = 'white';
+                    option.style.borderColor = '#e1e5e9';
+                    label.style.color = '#666';
+                    label.style.fontWeight = 'normal';
+                }
+            });
+        });
+    }
+
+    // 切換貼文內容顯示
+    togglePostContent(postId) {
+        const post = this.currentPosts.find(p => p.id === parseInt(postId));
+        if (!post) return;
+
+        const contentDiv = document.getElementById(`post-content-${postId}`);
+        const toggleBtn = document.getElementById(`toggle-btn-${postId}`);
+        
+        if (contentDiv.innerHTML.includes('...')) {
+            // 顯示完整內容
+            contentDiv.innerHTML = `<p>${post.content}</p>`;
+            toggleBtn.textContent = '收起';
+        } else {
+            // 顯示截斷內容
+            contentDiv.innerHTML = `<p>${post.content.substring(0, 30)}${post.content.length > 30 ? '...' : ''}</p>`;
+            toggleBtn.textContent = '閱讀更多';
+        }
     }
 
     // 查看問題詳情
-    viewQuestion(questionId) {
-        // 這裡可以實現查看問題詳情的功能
-        console.log('查看問題:', questionId);
+    async viewQuestion(questionId) {
+        try {
+            const question = await API.getQuestion(questionId);
+            this.showQuestionModal(question);
+        } catch (error) {
+            console.error('載入問題失敗:', error);
+            alert('載入問題失敗');
+        }
     }
+
+    // 顯示問題詳情模態框
+    showQuestionModal(question) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <h2>${question.title}</h2>
+                <div class="post-meta">
+                    <span>提問者: ${question.author || '匿名'}</span>
+                    <span>提問時間: ${new Date(question.created_at).toLocaleDateString()}</span>
+                </div>
+                <div class="question-content">
+                    <p>${question.content}</p>
+                </div>
+                <div class="answers-section">
+                    <h3>回答</h3>
+                    <div id="answers-container">
+                        <p>載入中...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // 載入回答
+        this.loadAnswers(question.id);
+        
+        // 點擊模態框外部關閉
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        };
+    }
+
+    // 載入回答
+    async loadAnswers(questionId) {
+        try {
+            const answers = await API.getAnswers(questionId);
+            this.renderAnswers(answers);
+        } catch (error) {
+            document.getElementById('answers-container').innerHTML = '<p>載入回答失敗</p>';
+        }
+    }
+
+    // 渲染回答
+    renderAnswers(answers) {
+        const container = document.getElementById('answers-container');
+        
+        if (!answers || answers.length === 0) {
+            container.innerHTML = '<p>目前沒有回答</p>';
+            return;
+        }
+
+        const answersHTML = answers.map(answer => `
+            <div class="answer-item">
+                <div class="post-meta">
+                    <span>回答者: ${answer.author || '匿名'}</span>
+                    <span>回答時間: ${new Date(answer.created_at).toLocaleDateString()}</span>
+                </div>
+                <p>${answer.content}</p>
+            </div>
+        `).join('');
+
+        container.innerHTML = answersHTML;
+    }
+
+
 }
 
 // 初始化應用程式

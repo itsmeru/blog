@@ -65,9 +65,7 @@
                     <h2><i class="fas fa-question-circle"></i> 問答區</h2>
                     <button id="newQuestionBtn" class="btn btn-primary">提出問題</button>
                 </div>
-                <div id="qaContainer" class="qa-grid">
-                    <!-- 問答會在這裡動態載入 -->
-                </div>
+                <div id="qaContainer" class="qa-grid"></div>
             </div>
         </section>
     </main>
@@ -123,7 +121,7 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>發布新貼文</h2>
-            <form id="newPostForm" class="post-form">
+            <form id="newPostForm" class="post-form" enctype="multipart/form-data">
                 <div class="form-group">
                     <label for="postTitle">標題</label>
                     <input type="text" id="postTitle" name="title" required>
@@ -131,6 +129,42 @@
                 <div class="form-group">
                     <label for="postContent">內容</label>
                     <textarea id="postContent" name="content" rows="8" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="postTags">標籤</label>
+                    <div class="tags-container">
+                        <div class="tag-options">
+                            <label class="tag-option">
+                                <input type="checkbox" name="tags" value="技術">
+                                <span class="tag-label">技術</span>
+                            </label>
+                            <label class="tag-option">
+                                <input type="checkbox" name="tags" value="生活">
+                                <span class="tag-label">生活</span>
+                            </label>
+                            <label class="tag-option">
+                                <input type="checkbox" name="tags" value="學習">
+                                <span class="tag-label">學習</span>
+                            </label>
+                            <label class="tag-option">
+                                <input type="checkbox" name="tags" value="分享">
+                                <span class="tag-label">分享</span>
+                            </label>
+                            <label class="tag-option">
+                                <input type="checkbox" name="tags" value="心得">
+                                <span class="tag-label">心得</span>
+                            </label>
+                        </div>
+                        <input type="text" id="customTag" name="customTag" placeholder="自訂標籤（用逗號分隔）" class="custom-tag-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="postImage">圖片（可選）</label>
+                    <input type="file" id="postImage" name="image" accept="image/*" class="file-input">
+                    <div id="imagePreview" class="image-preview" style="display: none;">
+                        <img id="previewImg" src="" alt="預覽">
+                        <button type="button" id="removeImage" class="btn btn-small">移除圖片</button>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-full">發布</button>
             </form>

@@ -52,13 +52,10 @@ def register(request):
         )
 
     except json.JSONDecodeError as e:
-        print(f"JSON 解析錯誤: {e}")
-        print(f"請求體: {request.body}")
         return JsonResponse(
             {"success": False, "message": f"無效的 JSON 格式: {str(e)}"}, status=400
         )
     except Exception as e:
-        print(f"註冊異常: {e}")
         return JsonResponse(
             {"success": False, "message": f"註冊失敗: {str(e)}"}, status=500
         )
@@ -163,5 +160,4 @@ def refresh_token(request):
 def logout(request):
     response = JsonResponse({"message": "Logout successfully"})
     response.delete_cookie("refresh_token", path="/")
-    print("logout 登出")
     return response
