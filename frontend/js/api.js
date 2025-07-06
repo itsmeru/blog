@@ -110,11 +110,11 @@ class API {
     // 貼文 API
     static async getPosts(params = {}) {
         const query = new URLSearchParams(params).toString();
-        return this.request(`/posts/get/?${query}`);
+        return this.request(`/posts/?${query}`);
     }
 
     static async createPost(postData) {
-        return this.request('/posts/create/', {
+        return this.request('/posts/', {
             method: 'POST',
             body: JSON.stringify(postData),
             credentials: 'include',
