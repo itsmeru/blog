@@ -177,8 +177,8 @@ class BlogApp {
         LoadingManager.show(container);
 
         try {
-            const posts = await API.getPosts();
-            this.renderPosts(posts);
+            const result = await API.getPosts();
+            this.renderPosts(result.posts);
         } catch (error) {
             container.innerHTML = '<p>載入貼文失敗</p>';
             console.log('載入貼文失敗');
@@ -201,7 +201,7 @@ class BlogApp {
                 <h3>${post.title}</h3>
                 <div class="post-meta">
                     <span>作者: ${post.author || '匿名'}</span>
-                    <span>發布時間: ${new Date(post.created_at).toLocaleDateString()}</span>
+                    <span>發布時間: ${post.created_at}</span>
                 </div>
                 <p>${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
                 <button class="btn btn-primary" onclick="app.viewPost(${post.id})">閱讀更多</button>
@@ -314,7 +314,8 @@ class BlogApp {
         };
 
         try {
-            await API.createPost(postData);
+            let res = await API.createPost(postData);
+            console.log(res.message);
             
             this.hideModal('newPostModal');
             alert('貼文發布成功！');

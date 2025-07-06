@@ -109,13 +109,14 @@ class API {
 
     // 貼文 API
     static async getPosts() {
-        return this.request('/posts/');
+        return this.request('/posts/get/');
     }
 
     static async createPost(postData) {
-        return this.request('/posts/', {
+        return this.request('/posts/create/', {
             method: 'POST',
             body: JSON.stringify(postData),
+            credentials: 'include',
         });
     }
 
@@ -127,12 +128,14 @@ class API {
         return this.request(`/posts/${id}/`, {
             method: 'PUT',
             body: JSON.stringify(postData),
+            credentials: 'include',
         });
     }
 
     static async deletePost(id) {
         return this.request(`/posts/${id}/`, {
             method: 'DELETE',
+            credentials: 'include',
         });
     }
 
@@ -145,6 +148,7 @@ class API {
         return this.request('/questions/', {
             method: 'POST',
             body: JSON.stringify(questionData),
+            credentials: 'include',
         });
     }
 
@@ -156,12 +160,14 @@ class API {
         return this.request(`/questions/${id}/`, {
             method: 'PUT',
             body: JSON.stringify(questionData),
+            credentials: 'include',
         });
     }
 
     static async deleteQuestion(id) {
         return this.request(`/questions/${id}/`, {
             method: 'DELETE',
+            credentials: 'include',
         });
     }
 
@@ -174,6 +180,7 @@ class API {
         return this.request(`/questions/${questionId}/answers/`, {
             method: 'POST',
             body: JSON.stringify(answerData),
+            credentials: 'include',
         });
     }
 }
