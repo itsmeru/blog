@@ -1,4 +1,3 @@
-import json
 import base64
 
 from accounts.utils import login_check
@@ -36,8 +35,6 @@ def create_post(request):
         if image_file:
             image_data = image_file.read()
             image_type = image_file.content_type
-            print("圖片類型:", image_type)
-            print("圖片大小:", len(image_data), "bytes")
         
         # 創建貼文
         post = Post.objects.create(
@@ -63,10 +60,11 @@ def get_posts(request):
     page = request.GET.get("page", 1)
     size = request.GET.get("size", 3)
     keyword = request.GET.get("keyword", "")
+    tags = request.GET.get("tags", "")  # 新增標籤參數
     order_by = request.GET.get("order", "desc")
     order_by = "-created_at" if order_by == "desc" else "created_at"
 
-    posts_page = Post.get_posts(page, size, keyword, order_by)
+    posts_page = Post.get_posts(page, size, keyword, order_by, tags)
 
     posts_data = []
     for post in posts_page:
@@ -90,7 +88,6 @@ def get_posts(request):
             ),
         })
     
-    # 從 posts_page 取得分頁資訊
     return JsonResponse(
         {
             "posts": posts_data,
@@ -100,31 +97,3 @@ def get_posts(request):
         }
     )
 
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def get_post(request, post_id):
-    try:
-        post = Post.objects.get(id=post_id)
-        image_data = None
-        if post.image and isinstance(post.image, bytes):
-            try:
-                image_data = f"data:{post.image_type};base64,{base64.b64encode(post.image).decode('utf-8')}"
-            except Exception as e:
-                print(f"圖片編碼錯誤: {e}")
-                image_data = None
-        
-        post_data = {
-            "id": post.id,
-            "title": post.title,
-            "content": post.content,
-            "tags": post.tags,
-            "image": image_data,
-            "author": post.author.username,
-            "created_at": (
-                post.created_at.strftime("%Y-%m-%d %H:%M") if post.created_at else None
-            ),
-        }
-        return JsonResponse(post_data)
-    except Post.DoesNotExist:
-        return JsonResponse({"message": "Post not found"}, status=404)

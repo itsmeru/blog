@@ -1,71 +1,41 @@
 class BlogApp {
     constructor() {
-        this.init().catch(error => {
-            console.error('應用初始化失敗:', error);
-        });
+        this.currentPosts = [];
+        this.currentQuestions = [];
     }
 
     async init() {
-        // 先檢查登入狀態
+        // 先檢查並恢復登入狀態
         await AuthManager.checkAuthStatus();
         
         this.setupEventListeners();
-        this.setupSearchEvents();
-        this.updateAuthUI();
-        this.loadInitialData();
-    }
-
-    // 設置事件監聽器
-    setupEventListeners() {
-        // 模態框事件
         this.setupModalEvents();
-        
-        // 表單事件
         this.setupFormEvents();
-        
-        // 導航事件
         this.setupNavigationEvents();
+        this.setupSearchEvents();
+        this.setupImageUpload();
+        this.setupTagSelection();
+        this.updateAuthUI();
+        await this.loadInitialData();
     }
 
-    // 模態框管理
+    setupEventListeners() {
+        // 登入註冊按鈕
+        document.getElementById('loginBtn').addEventListener('click', () => this.showModal('loginModal'));
+        document.getElementById('registerBtn').addEventListener('click', () => this.showModal('registerModal'));
+        document.getElementById('logoutBtn').addEventListener('click', () => this.handleLogout());
+
+        // 新貼文和問題按鈕
+        document.getElementById('newPostBtn').addEventListener('click', () => this.showModal('newPostModal'));
+        document.getElementById('newQuestionBtn').addEventListener('click', () => this.showModal('newQuestionModal'));
+    }
+
     setupModalEvents() {
-        // 登入按鈕
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            this.showModal('loginModal');
-        });
-
-        // 註冊按鈕
-        document.getElementById('registerBtn').addEventListener('click', () => {
-            this.showModal('registerModal');
-        });
-
-        // 新貼文按鈕
-        document.getElementById('newPostBtn').addEventListener('click', () => {
-            if (!AuthManager.isAuthenticated()) {
-                alert('請先登入');
-                return;
-            }
-            this.showModal('newPostModal');
-        });
-
-        // 新問題按鈕
-        document.getElementById('newQuestionBtn').addEventListener('click', () => {
-            if (!AuthManager.isAuthenticated()) {
-                console.log('請先登入');
-                return;
-            }
-            this.showModal('newQuestionModal');
-        });
-
-        // 登出按鈕
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            AuthManager.logout();
-        });
-
         // 關閉模態框
         document.querySelectorAll('.close').forEach(closeBtn => {
             closeBtn.addEventListener('click', (e) => {
-                this.hideModal(e.target.closest('.modal').id);
+                const modal = e.target.closest('.modal');
+                this.hideModal(modal.id);
             });
         });
 
@@ -79,135 +49,215 @@ class BlogApp {
         });
     }
 
-    // 表單事件處理
     setupFormEvents() {
         // 登入表單
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            await this.handleLogin();
+            this.handleLogin();
         });
 
         // 註冊表單
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        document.getElementById('registerForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            await this.handleRegister();
+            this.handleRegister();
         });
 
         // 新貼文表單
-        document.getElementById('newPostForm').addEventListener('submit', async (e) => {
+        document.getElementById('newPostForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            await this.handleCreatePost();
+            this.handleCreatePost();
         });
 
         // 新問題表單
-        document.getElementById('newQuestionForm').addEventListener('submit', async (e) => {
+        document.getElementById('newQuestionForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            await this.handleCreateQuestion();
+            this.handleCreateQuestion();
         });
-
-        // 圖片上傳預覽
-        this.setupImageUpload();
-        
-        // 標籤選擇效果
-        this.setupTagSelection();
     }
 
-    // 導航事件
     setupNavigationEvents() {
-        // 平滑滾動到錨點
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', (e) => {
+        // 導航連結
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const target = document.querySelector(anchor.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
+                const targetId = link.getAttribute('href').substring(1);
+                document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
             });
         });
     }
 
     setupSearchEvents() {
-        const searchInput = document.getElementById('searchInput');
         const searchBtn = document.getElementById('searchBtn');
+        const searchInput = document.getElementById('searchInput');
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
+
         searchBtn.addEventListener('click', () => {
             const keyword = searchInput.value.trim();
-            this.loadPosts(1, keyword);
+            const activeTags = Array.from(document.querySelectorAll('.filter-tag.active'))
+                .map(tag => tag.dataset.tag);
+            this.loadPosts(1, keyword, activeTags);
         });
-        searchInput.addEventListener('keydown', (e) => {
+
+        searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 const keyword = searchInput.value.trim();
-                this.loadPosts(1, keyword);
+                const activeTags = Array.from(document.querySelectorAll('.filter-tag.active'))
+                    .map(tag => tag.dataset.tag);
+                this.loadPosts(1, keyword, activeTags);
             }
+        });
+
+        clearFilterBtn.addEventListener('click', () => {
+            this.clearFilter();
         });
     }
 
-    // 顯示模態框
     showModal(modalId) {
         document.getElementById(modalId).style.display = 'block';
-        document.body.style.overflow = 'hidden';
     }
 
-    // 隱藏模態框
     hideModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
-        document.body.style.overflow = 'auto';
-        
         // 清空表單
-        const form = document.querySelector(`#${modalId} form`);
-        if (form) {
-            form.reset();
-        }
+        const form = document.getElementById(modalId).querySelector('form');
+        if (form) form.reset();
     }
 
-    // 更新認證 UI
     updateAuthUI() {
+        const isLoggedIn = AuthManager.isLoggedIn();
         const loginBtn = document.getElementById('loginBtn');
         const registerBtn = document.getElementById('registerBtn');
         const userMenu = document.getElementById('userMenu');
+        const username = document.getElementById('username');
+        const newPostBtn = document.getElementById('newPostBtn');
+        const newQuestionBtn = document.getElementById('newQuestionBtn');
 
-        if (AuthManager.isAuthenticated()) {
+        if (isLoggedIn) {
             loginBtn.style.display = 'none';
             registerBtn.style.display = 'none';
             userMenu.style.display = 'flex';
+            username.textContent = AuthManager.getUsername() || '用戶';
+            
+            // 顯示發布按鈕
+            if (newPostBtn) newPostBtn.style.display = 'inline-block';
+            if (newQuestionBtn) newQuestionBtn.style.display = 'inline-block';
         } else {
             loginBtn.style.display = 'inline-block';
             registerBtn.style.display = 'inline-block';
             userMenu.style.display = 'none';
+            
+            // 隱藏發布按鈕
+            if (newPostBtn) newPostBtn.style.display = 'none';
+            if (newQuestionBtn) newQuestionBtn.style.display = 'none';
         }
     }
 
-    // 載入初始數據
     async loadInitialData() {
-        try {
-            await Promise.all([
-                this.loadPosts(),
-                this.loadQuestions()
-            ]);
-        } catch (error) {
-            console.error('載入初始數據失敗:', error);
-        }
+        await this.loadPosts();
+        await this.loadQuestions();
     }
 
     // 載入貼文
-    async loadPosts(page = 1, keyword = '') {
+    async loadPosts(page = 1, keyword = '', selectedTags = []) {
         const container = document.getElementById('postsContainer');
         LoadingManager.show(container);
 
         try {
             const params = { page };
             if (keyword) params.keyword = keyword;
+            if (selectedTags && selectedTags.length > 0) {
+                params.tags = selectedTags.join(',');
+            }
             const result = await API.getPosts(params);
             this.currentPosts = result.posts; // 儲存貼文資料
             this.renderPosts(result.posts);
-            this.renderPagination(result.current_page, result.num_pages, keyword);
+            this.renderPagination(result.current_page, result.num_pages, keyword, selectedTags);
+            
+            // 如果是第一頁，載入所有標籤
+            if (page === 1) {
+                await this.loadAllTags();
+            }
         } catch (error) {
             container.innerHTML = '<p>載入貼文失敗</p>';
         } finally {
             LoadingManager.hide(container);
         }
+    }
+
+    // 載入所有標籤
+    async loadAllTags() {
+        try {
+            // 載入所有貼文來收集標籤（不分頁）
+            const result = await API.getPosts({ page: 1, size: 1000 }); // 載入大量貼文
+            const allTags = new Set();
+            
+            result.posts.forEach(post => {
+                if (post.tags) {
+                    post.tags.split(',').forEach(tag => {
+                        allTags.add(tag.trim());
+                    });
+                }
+            });
+
+            this.renderFilterTags(Array.from(allTags));
+        } catch (error) {
+            console.error('載入標籤失敗:', error);
+        }
+    }
+
+    // 渲染篩選標籤
+    renderFilterTags(tags) {
+        // 保存當前選中的標籤
+        const currentActiveTags = Array.from(document.querySelectorAll('.filter-tag.active'))
+            .map(tag => tag.dataset.tag);
+        
+        const filterTagList = document.getElementById('filterTagList');
+        const tagsHTML = tags.map(tag => {
+            const isActive = currentActiveTags.includes(tag);
+            return `<span class="filter-tag ${isActive ? 'active' : ''}" data-tag="${tag}">${tag}</span>`;
+        }).join('');
+        filterTagList.innerHTML = tagsHTML;
+
+        // 添加點擊事件
+        filterTagList.querySelectorAll('.filter-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+                console.log('標籤點擊:', tag.dataset.tag);
+                tag.classList.toggle('active');
+                console.log('標籤狀態:', tag.classList.contains('active'));
+                this.filterPostsByTags();
+            });
+        });
+    }
+
+    // 根據標籤篩選貼文
+    async filterPostsByTags() {
+        const activeTags = Array.from(document.querySelectorAll('.filter-tag.active'))
+            .map(tag => tag.dataset.tag);
+        
+        // 顯示或隱藏清除篩選按鈕
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
+        if (activeTags.length > 0) {
+            clearFilterBtn.style.display = 'inline-block';
+        } else {
+            clearFilterBtn.style.display = 'none';
+        }
+        
+        // 重新載入貼文，包含標籤篩選
+        await this.loadPosts(1, '', activeTags);
+    }
+
+    // 清除篩選
+    clearFilter() {
+        // 清除所有選中的標籤
+        document.querySelectorAll('.filter-tag.active').forEach(tag => {
+            tag.classList.remove('active');
+        });
+        
+        // 隱藏清除篩選按鈕
+        document.getElementById('clearFilterBtn').style.display = 'none';
+        
+        // 回到正常分頁模式
+        this.loadPosts(1);
     }
 
     // 渲染貼文
@@ -223,17 +273,19 @@ class BlogApp {
 
         const postsHTML = posts.map(post => `
             <div class="post-card">
-                <h3>${post.title}</h3>
-                <div class="post-meta">
-                    <span>作者: ${post.author || '匿名'}</span>
-                    <span>發布時間: ${post.created_at}</span>
+                ${post.image ? `<div class="post-image"><img src="${post.image}" alt="${post.title}" class="post-img"></div>` : ''}
+                <div class="post-header">
+                    <h3 class="post-title">${post.title}</h3>
+                    <div class="post-meta">
+                        <span class="author"><i class="fas fa-user"></i> ${post.author || '匿名'}</span>
+                        <span class="date"><i class="fas fa-calendar"></i> ${post.created_at}</span>
+                    </div>
                 </div>
                 ${post.tags ? `<div class="post-tags">${post.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
-                ${post.image ? `<div class="post-image"><img src="${post.image}" alt="${post.title}" class="post-img"></div>` : ''}
                 <div class="post-content" id="post-content-${post.id}">
-                    <p>${post.content.substring(0, 30)}${post.content.length > 30 ? '...' : ''}</p>
+                    <p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}</p>
                 </div>
-                ${post.content.length > 30 ? `<button class="btn btn-primary" onclick="app.togglePostContent(${post.id})" id="toggle-btn-${post.id}">閱讀更多</button>` : ''}
+                ${post.content.length > 100 ? `<button class="btn btn-outline-primary" onclick="app.togglePostContent(${post.id})" id="toggle-btn-${post.id}">閱讀更多</button>` : ''}
             </div>
         `).join('');
 
@@ -241,7 +293,7 @@ class BlogApp {
     }
 
     // 分頁渲染
-    renderPagination(currentPage, numPages, keyword = '') {
+    renderPagination(currentPage, numPages, keyword = '', selectedTags = []) {
         const container = document.getElementById('pagination');
         container.innerHTML = '';
 
@@ -255,7 +307,7 @@ class BlogApp {
         const prevBtn = document.createElement('button');
         prevBtn.textContent = '上一頁';
         prevBtn.disabled = currentPage === 1;
-        prevBtn.onclick = () => this.loadPosts(currentPage - 1, keyword);
+        prevBtn.onclick = () => this.loadPosts(currentPage - 1, keyword, selectedTags);
         container.appendChild(prevBtn);
 
         // 頁碼
@@ -263,7 +315,7 @@ class BlogApp {
             const btn = document.createElement('button');
             btn.textContent = i;
             btn.disabled = i === currentPage;
-            btn.onclick = () => this.loadPosts(i, keyword);
+            btn.onclick = () => this.loadPosts(i, keyword, selectedTags);
             container.appendChild(btn);
         }
 
@@ -271,7 +323,7 @@ class BlogApp {
         const nextBtn = document.createElement('button');
         nextBtn.textContent = '下一頁';
         nextBtn.disabled = currentPage === numPages;
-        nextBtn.onclick = () => this.loadPosts(currentPage + 1, keyword);
+        nextBtn.onclick = () => this.loadPosts(currentPage + 1, keyword, selectedTags);
         container.appendChild(nextBtn);
     }
 
@@ -383,7 +435,6 @@ class BlogApp {
         
         // 收集自訂標籤
         const customTags = formData.get('customTag');
-        console.log(customTags);
         
         if (customTags) {
             const customTagArray = customTags.split(',').map(tag => tag.trim()).filter(tag => tag);
@@ -501,7 +552,7 @@ class BlogApp {
             toggleBtn.textContent = '收起';
         } else {
             // 顯示截斷內容
-            contentDiv.innerHTML = `<p>${post.content.substring(0, 30)}${post.content.length > 30 ? '...' : ''}</p>`;
+            contentDiv.innerHTML = `<p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}</p>`;
             toggleBtn.textContent = '閱讀更多';
         }
     }
@@ -586,11 +637,14 @@ class BlogApp {
         container.innerHTML = answersHTML;
     }
 
-
+    // 處理登出
+    handleLogout() {
+        AuthManager.logout();
+        this.updateAuthUI();
+        alert('已登出');
+    }
 }
 
-// 初始化應用程式
-let app;
-document.addEventListener('DOMContentLoaded', () => {
-    app = new BlogApp();
-}); 
+// 初始化應用
+const app = new BlogApp();
+document.addEventListener('DOMContentLoaded', () => app.init()); 

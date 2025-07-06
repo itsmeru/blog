@@ -99,6 +99,17 @@ body {
     color: #667eea;
 }
 
+.btn-outline-primary {
+    background: transparent;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.btn-outline-primary:hover {
+    background: #667eea;
+    color: white;
+}
+
 .btn-large {
     padding: 1rem 2rem;
     font-size: 1.1rem;
@@ -169,19 +180,48 @@ body {
 
 .post-card {
     background: white;
-    border-radius: 10px;
-    padding: 1.5rem;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
 }
 
 .post-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 
-.post-card h3 {
+.post-header {
+    padding: 1.5rem 1.5rem 0 1.5rem;
+}
+
+.post-title {
     color: #333;
+    margin-bottom: 0.8rem;
+    font-size: 1.3rem;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.post-meta {
+    display: flex;
+    gap: 1rem;
+    color: #666;
+    font-size: 0.85rem;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.post-meta .author,
+.post-meta .date {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.post-meta i {
+    color: #667eea;
 }
 
 .post-meta {
@@ -191,12 +231,13 @@ body {
 }
 
 .post-tags {
+    padding: 0 1.5rem;
     margin-bottom: 1rem;
 }
 
 .post-tags .tag {
     display: inline-block;
-    background: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 0.2rem 0.6rem;
     border-radius: 12px;
@@ -211,10 +252,18 @@ body {
 
 .post-img {
     width: 100%;
-    max-height: 200px;
+    height: 200px;
     object-fit: cover;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.post-content {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.post-content p {
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 1rem;
 }
 
 /* 問答網格 */
@@ -491,12 +540,59 @@ body {
     margin: 0 2px;
     padding: 5px 10px;
 }
+.search-filter-container {
+    margin-bottom: 2rem;
+}
+
 .search-bar {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 20px 0 30px 0;
+    margin-bottom: 1rem;
     gap: 10px;
+}
+
+.filter-tags {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.filter-label {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.filter-tag-list {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-tag {
+    padding: 0.3rem 0.8rem;
+    background: #f1f3f4;
+    border: 1px solid #e1e5e9;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.filter-tag:hover {
+    background: #e8eaed;
+    border-color: #dadce0;
+}
+
+.filter-tag.active {
+    background: #667eea !important;
+    color: white !important;
+    border-color: #667eea !important;
 }
 
 #searchInput {

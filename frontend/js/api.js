@@ -10,6 +10,7 @@ class API {
             headers: {
                 'Content-Type': 'application/json',
             },
+            credentials: 'include', // 包含 cookies
         };
 
         // 如果有 access token，添加到 headers
@@ -231,6 +232,16 @@ class AuthManager {
     
     static isAuthenticated() {
         return !!this.accessToken;
+    }
+
+    static isLoggedIn() {
+        return !!this.accessToken;
+    }
+
+    static getUsername() {
+        // 從 token 中解析用戶名（簡單實現）
+        // 實際應用中可能需要從後端獲取用戶資訊
+        return '用戶';
     }
 
     // 檢查並恢復登入狀態

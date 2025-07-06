@@ -48,9 +48,17 @@
                     <h2><i class="fas fa-newspaper"></i> 最新貼文</h2>
                     <button id="newPostBtn" class="btn btn-primary">發布新貼文</button>
                 </div>
-                <div class="search-bar">
-                    <input type="text" id="searchInput" placeholder="搜尋標題關鍵字...">
-                    <button id="searchBtn">搜尋</button>
+                <div class="search-filter-container">
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" placeholder="搜尋標題關鍵字...">
+                        <button id="searchBtn">搜尋</button>
+                    </div>
+                    <div class="filter-tags">
+                        <span class="filter-label">標籤篩選:</span>
+                        <div class="filter-tag-list" id="filterTagList">
+                        </div>
+                        <button id="clearFilterBtn" class="btn btn-small" style="display: none;">清除篩選</button>
+                    </div>
                 </div>
                 <div id="postsContainer" class="posts-grid">
                 </div>
