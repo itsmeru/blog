@@ -249,7 +249,7 @@ class AuthManager {
         try {
             const response = await fetch(`${API_BASE_URL}/auth/refresh-token/`, {
                 method: 'GET',
-                credentials: 'include', // 包含 cookies
+                credentials: 'include',
             });
             if (response.ok) {
                 const data = await response.json();

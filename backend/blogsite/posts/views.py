@@ -60,7 +60,7 @@ def get_posts(request):
     page = request.GET.get("page", 1)
     size = request.GET.get("size", 3)
     keyword = request.GET.get("keyword", "")
-    tags = request.GET.get("tags", "")  # 新增標籤參數
+    tags = request.GET.get("tags", "")
     order_by = request.GET.get("order", "desc")
     order_by = "-created_at" if order_by == "desc" else "created_at"
 

@@ -1,15 +1,16 @@
 import json
 from datetime import datetime, timedelta
+import os
 
 import jwt
-from blogsite import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from dotenv import load_dotenv
 
 from .models import Account
 
-
+load_dotenv()
 @csrf_exempt
 @require_http_methods(["POST"])
 def register(request):
@@ -117,13 +118,13 @@ def generate_token(account):
         "username": account.username,
         "exp": datetime.utcnow() + timedelta(minutes=30),
     }
-    access_token = jwt.encode(access_payload, settings.SECRET_KEY, algorithm="HS256")
+    access_token = jwt.encode(access_payload, os.getenv("SECRET_KEY"), algorithm="HS256")
 
     refresh_payload = {
         "user_id": account.id,
         "exp": datetime.utcnow() + timedelta(days=7),
     }
-    refresh_token = jwt.encode(refresh_payload, settings.SECRET_KEY, algorithm="HS256")
+    refresh_token = jwt.encode(refresh_payload, os.getenv("SECRET_KEY"), algorithm="HS256")
 
     return access_token, refresh_token
 
@@ -135,7 +136,7 @@ def refresh_token(request):
     if not refresh_token:
         return JsonResponse({"error": "No refresh token"}, status=401)
     try:
-        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(refresh_token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
         account = Account.objects.get(id=payload.get("user_id"))
         access_token, new_refresh_token = generate_token(account)
         response = JsonResponse({"access_token": access_token})

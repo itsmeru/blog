@@ -28,7 +28,6 @@ class Post(models.Model):
         if tags:
             tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
             if tag_list:
-                # 使用 Q 物件來實現 OR 查詢（包含任一標籤的貼文）
                 tag_queries = Q()
                 for tag in tag_list:
                     tag_queries |= Q(tags__icontains=tag)
