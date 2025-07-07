@@ -28,16 +28,12 @@ class API {
         };
 
         try {
-            console.log('API 請求:', { url, config });
-            const response = await fetch(url, config);
-            console.log('API 響應狀態:', response.status);
-            
+            const response = await fetch(url, config);            
             const data = await response.json();
-            console.log('API 響應數據:', data);
 
             // 如果 token 過期，嘗試刷新
-            if (response.status === 401 && AuthManager.getAccessToken()) {
-                console.log('Token 過期，嘗試刷新...');
+            if (response.status === 401 && AuthManager.getAccessToken() && !this._refreshingToken) {
+                this._refreshingToken = true;
                 try {
                     await this.refreshToken();
                     // 重新發送請求
@@ -51,20 +47,30 @@ class API {
                     return retryData;
                 } catch (refreshError) {
                     console.error('Token 刷新失敗:', refreshError);
-                    // 刷新失敗，清除 token 並跳轉到登入
-                    AuthManager.logout();
+                    // 刷新失敗，清除 token，但不調用 logout 避免循環
+                    AuthManager.clearAccessToken();
                     throw new Error('登入已過期，請重新登入');
+                } finally {
+                    this._refreshingToken = false;
                 }
             }
 
             if (!response.ok) {
                 console.error('API 請求失敗:', { status: response.status, data });
+                // 如果是 401 錯誤，不要重試
+                if (response.status === 401) {
+                    AuthManager.clearAccessToken();
+                }
                 throw new Error(data.message || data.error || '請求失敗');
             }
 
             return data;
         } catch (error) {
             console.error('API 請求異常:', error);
+            // 如果是 401 錯誤且沒有 token，不要重試
+            if (error.message && error.message.includes('401') && !AuthManager.getAccessToken()) {
+                console.log('未登入，跳過重試');
+            }
             throw error;
         }
     }
@@ -209,14 +215,24 @@ class API {
     }
 
     // 回答 API
-    static async getAnswers(questionId) {
-        return this.request(`/questions/${questionId}/answers/`);
-    }
-
     static async createAnswer(questionId, data) {
         return this.request(`/questions/${questionId}/answers/`, {
             method: 'POST',
             body: JSON.stringify(data),
+            credentials: 'include',
+        });
+    }
+
+    static async likeQuestion(questionId) {
+        return this.request(`/questions/${questionId}/like/`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+    }
+
+    static async likeAnswer(answerId) {
+        return this.request(`/questions/answers/${answerId}/like/`, {
+            method: 'POST',
             credentials: 'include',
         });
     }
@@ -238,9 +254,6 @@ class AuthManager {
         this.accessToken = null;
     }
     
-    static isAuthenticated() {
-        return !!this.accessToken;
-    }
 
     static isLoggedIn() {
         return !!this.accessToken;
@@ -254,6 +267,13 @@ class AuthManager {
 
     // 檢查並恢復登入狀態
     static async checkAuthStatus() {
+        // 防止重複調用
+        if (this._checkingAuth) {
+            return this.isLoggedIn();
+        }
+        
+        this._checkingAuth = true;
+        
         try {
             const response = await fetch(`${API_BASE_URL}/auth/refresh-token/`, {
                 method: 'GET',
@@ -264,25 +284,42 @@ class AuthManager {
                 this.setAccessToken(data.access_token);
                 return true;
             } else {
-                const errorData = await response.json().catch(() => ({}));
                 this.clearAccessToken();
                 return false;
             }
         } catch (error) {
+            console.log('檢查登入狀態失敗:', error);
             this.clearAccessToken();
             return false;
+        } finally {
+            this._checkingAuth = false;
         }
     }
 
     static async logout() {
+        // 防止重複登出
+        if (this._loggingOut) {
+            return;
+        }
+        this._loggingOut = true;
+        
         this.clearAccessToken();
         // 清除 refresh token cookie
+        try {
         await fetch(`${API_BASE_URL}/auth/logout/`,{
             method: 'POST',
             credentials: 'include',
-        })
+            });
+        } catch (error) {
+            console.log('登出請求失敗:', error);
+        }
         
-        window.location.reload();
+        // 更新 UI
+        if (window.app) {
+            window.app.updateAuthUI();
+        }
+        
+        this._loggingOut = false;
     }
 }
 

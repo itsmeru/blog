@@ -5,6 +5,12 @@
     box-sizing: border-box;
 }
 
+/* 暫時禁用所有過渡效果來測試 */
+* {
+    transition: none !important;
+    animation: none !important;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
@@ -606,6 +612,47 @@ body {
     font-weight: 400;
     text-align: justify;
     word-break: break-word;
+}
+
+.answer-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.like-answer-btn {
+    background: transparent;
+    color: #667eea;
+    border: 1px solid #667eea;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.like-answer-btn:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.question-actions {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.views-count {
+    color: #666;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .qa-detail-answer-form {

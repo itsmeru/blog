@@ -71,6 +71,9 @@ def create_question(request):
 def get_question_detail(request, question_id):
     try:
         q = Question.objects.get(id=question_id)
+        # 自動增加瀏覽數
+        q.views += 1
+        q.save()
     except Question.DoesNotExist:
         return JsonResponse({"message": "Question not found"}, status=404)
     answers = Answer.objects.filter(question=q).order_by('created_at')
@@ -125,20 +128,83 @@ def create_answer(request, question_id):
         q = Question.objects.get(id=question_id)
     except Question.DoesNotExist:
         return JsonResponse({"message": "Question not found"}, status=404)
-    data = json.loads(request.body)
-    content = data.get("content")
-    a = Answer.objects.create(
-        content=content,
-        author=request.account,
-        question=q
-    )
-    # 更新回答數
-    q.answer_count = Answer.objects.filter(question=q).count()
-    q.save()
-    return JsonResponse({
-        "id": a.id,
-        "content": a.content,
-        "created_at": a.created_at.strftime("%Y-%m-%d %H:%M"),
-        "author": a.author.username,
-        "likes": a.likes,
-    })
+    
+    try:
+        data = json.loads(request.body)
+        content = data.get("content")
+    
+        a = Answer.objects.create(
+            content=content,
+            author=request.account,
+            question=q
+        )
+        print(f"回答創建成功: {a.id}")
+        
+        # 更新回答數
+        q.answer_count = Answer.objects.filter(question=q).count()
+        q.save()
+        
+        response_data = {
+            "id": a.id,
+            "content": a.content,
+            "created_at": a.created_at.strftime("%Y-%m-%d %H:%M"),
+            "author": a.author.username,
+            "likes": a.likes,
+        }
+        return JsonResponse(response_data)
+    except json.JSONDecodeError as e:
+        print(f"JSON 解析錯誤: {e}")
+        return JsonResponse({"message": "Invalid JSON"}, status=400)
+    except Exception as e:
+        print(f"創建回答時發生錯誤: {e}")
+        return JsonResponse({"message": f"創建回答失敗: {str(e)}"}, status=500)
+
+@csrf_exempt
+@login_check
+@require_http_methods(["POST"])
+def like_question(request, question_id):
+    try:
+        q = Question.objects.get(id=question_id)
+        q.likes += 1
+        q.save()
+        return JsonResponse({
+            "likes": q.likes,
+            "message": "按讚成功"
+        })
+    except Question.DoesNotExist:
+        return JsonResponse({"message": "Question not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"message": f"按讚失敗: {str(e)}"}, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def view_question(request, question_id):
+    try:
+        q = Question.objects.get(id=question_id)
+        q.views += 1
+        q.save()
+        return JsonResponse({
+            "views": q.views,
+            "message": "瀏覽記錄成功"
+        })
+    except Question.DoesNotExist:
+        return JsonResponse({"message": "Question not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"message": f"瀏覽記錄失敗: {str(e)}"}, status=500)
+
+@csrf_exempt
+@login_check
+@require_http_methods(["POST"])
+def like_answer(request, answer_id):
+    try:
+        a = Answer.objects.get(id=answer_id)
+        a.likes += 1
+        a.save()
+        return JsonResponse({
+            "likes": a.likes,
+            "message": "按讚成功"
+        })
+    except Answer.DoesNotExist:
+        return JsonResponse({"message": "Answer not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"message": f"按讚失敗: {str(e)}"}, status=500)
