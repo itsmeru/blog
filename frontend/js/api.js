@@ -28,11 +28,16 @@ class API {
         };
 
         try {
+            console.log('API 請求:', { url, config });
             const response = await fetch(url, config);
+            console.log('API 響應狀態:', response.status);
+            
             const data = await response.json();
+            console.log('API 響應數據:', data);
 
             // 如果 token 過期，嘗試刷新
             if (response.status === 401 && AuthManager.getAccessToken()) {
+                console.log('Token 過期，嘗試刷新...');
                 try {
                     await this.refreshToken();
                     // 重新發送請求
@@ -45,6 +50,7 @@ class API {
                     }
                     return retryData;
                 } catch (refreshError) {
+                    console.error('Token 刷新失敗:', refreshError);
                     // 刷新失敗，清除 token 並跳轉到登入
                     AuthManager.logout();
                     throw new Error('登入已過期，請重新登入');
@@ -52,11 +58,13 @@ class API {
             }
 
             if (!response.ok) {
-                throw new Error(data.message || '請求失敗');
+                console.error('API 請求失敗:', { status: response.status, data });
+                throw new Error(data.message || data.error || '請求失敗');
             }
 
             return data;
         } catch (error) {
+            console.error('API 請求異常:', error);
             throw error;
         }
     }
@@ -181,8 +189,8 @@ class API {
         });
     }
 
-    static async getQuestion(id) {
-        return this.request(`/questions/${id}/`);
+    static async getQuestion(questionId) {
+        return this.request(`/questions/${questionId}/`);
     }
 
     static async updateQuestion(id, questionData) {
@@ -205,10 +213,10 @@ class API {
         return this.request(`/questions/${questionId}/answers/`);
     }
 
-    static async createAnswer(questionId, answerData) {
+    static async createAnswer(questionId, data) {
         return this.request(`/questions/${questionId}/answers/`, {
             method: 'POST',
-            body: JSON.stringify(answerData),
+            body: JSON.stringify(data),
             credentials: 'include',
         });
     }

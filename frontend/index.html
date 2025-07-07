@@ -15,8 +15,8 @@
                 <h2><i class="fas fa-blog"></i> 我的部落格</h2>
             </div>
             <div class="nav-menu">
-                <a href="#posts" class="nav-link">貼文版</a>
-                <a href="#qa" class="nav-link">問答</a>
+                <a href="#" id="nav-posts" class="nav-link active">貼文</a>
+                <a href="#" id="nav-qa" class="nav-link">問答</a>
                 <a href="#about" class="nav-link">關於</a>
             </div>
             <div class="nav-auth">
@@ -42,7 +42,7 @@
         </section>
 
         <!-- 貼文版 -->
-        <section id="posts" class="section">
+        <section id="posts-section" class="section">
             <div class="container">
                 <div class="section-header">
                     <h2><i class="fas fa-newspaper"></i> 最新貼文</h2>
@@ -66,14 +66,35 @@
             </div>
         </section>
 
-        <!-- 問答區塊 -->
-        <section id="qa" class="section">
-            <div class="container">
-                <div class="section-header">
-                    <h2><i class="fas fa-question-circle"></i> 問答區</h2>
-                    <button id="newQuestionBtn" class="btn btn-primary">提出問題</button>
+        <!-- 問答區（Q&A Section） -->
+        <section id="qa-section" style="display:none;">
+            <div class="qa-header">
+                <div class="qa-header-left">
+                    <h2 class="qa-title-main">技術問答</h2>
+                    <div class="qa-tabs">
+                        <button id="qa-latest-tab" class="qa-tab active">最新</button>
+                        <button id="qa-hot-tab" class="qa-tab">熱門</button>
+                    </div>
                 </div>
-                <div id="qaContainer" class="qa-grid"></div>
+                <button id="newQuestionBtn" class="btn btn-primary">提出問題</button>
+            </div>
+            <div id="qa-list"></div>
+            <div id="qa-pagination"></div>
+        </section>
+
+        <!-- Q&A 詳情留言板區塊 -->
+        <section id="qa-detail-section" class="qa-detail-section" style="display:none;">
+            <div id="qa-detail-main"></div>
+            <div id="qa-detail-answers">
+                <h3>留言列表</h3>
+                <div id="qa-detail-answers-list"></div>
+            </div>
+            <div class="qa-detail-answer-form">
+                <h3>發表留言</h3>
+                <form id="qa-detail-answer-form">
+                    <textarea id="qa-detail-answer-content" rows="4" required placeholder="輸入你的留言內容..."></textarea>
+                    <button type="submit">送出留言</button>
+                </form>
             </div>
         </section>
     </main>
@@ -179,21 +200,25 @@
         </div>
     </div>
 
-    <!-- 新問題模態框 -->
-    <div id="newQuestionModal" class="modal">
+    <!-- 新增問題 Modal -->
+    <div id="questionModal" class="modal" style="display:none;">
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>提出問題</h2>
-            <form id="newQuestionForm" class="question-form">
+            <span class="close" id="closeQuestionModal">&times;</span>
+            <h3>提出新問題</h3>
+            <form id="newQuestionForm">
                 <div class="form-group">
-                    <label for="questionTitle">問題標題</label>
+                    <label for="questionTitle">標題</label>
                     <input type="text" id="questionTitle" name="title" required>
                 </div>
                 <div class="form-group">
-                    <label for="questionContent">問題描述</label>
-                    <textarea id="questionContent" name="content" rows="6" required></textarea>
+                    <label for="questionContent">內容</label>
+                    <textarea id="questionContent" name="content" rows="5" required></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full">提出問題</button>
+                <div class="form-group">
+                    <label for="questionTags">標籤（逗號分隔）</label>
+                    <input type="text" id="questionTags" name="tags">
+                </div>
+                <button type="submit" class="btn btn-primary">送出</button>
             </form>
         </div>
     </div>

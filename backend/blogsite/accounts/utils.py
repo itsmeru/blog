@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from accounts.models import Account
 from blogsite import settings
 from django.http import JsonResponse
+from django.conf import settings
 
 load_dotenv()
 def login_check(view_func):
@@ -16,7 +17,7 @@ def login_check(view_func):
             return JsonResponse({"error": "未授權，缺少 token"}, status=401)
         token = auth_header.split(" ")[1]
         try:
-            payload = jwt.decode(token, os.getenv("SECRET_KEY"), algorithms=["HS256"])
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
             user_id = payload.get("user_id")
             account = Account.objects.get(id=user_id)
             request.account = account
