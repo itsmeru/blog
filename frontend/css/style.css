@@ -184,6 +184,16 @@ body {
     gap: 2rem;
 }
 
+.post-actions {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.read-more-btn {
+    padding: 0.5rem 1.5rem;
+    font-size: 0.9rem;
+}
+
 .post-card {
     background: white;
     border-radius: 15px;
@@ -254,12 +264,19 @@ body {
 
 .post-image {
     margin-bottom: 1rem;
+    overflow: hidden;
+    border-radius: 10px 10px 0 0;
 }
 
 .post-img {
     width: 100%;
-    height: 200px;
+    height: 180px;
     object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.post-card:hover .post-img {
+    transform: scale(1.05);
 }
 
 .post-content {
@@ -451,6 +468,162 @@ body {
     max-width: 900px;
     margin: 0 auto;
     padding: 2rem 1rem;
+}
+
+/* 貼文詳細頁面樣式 */
+.post-detail-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.post-detail-main {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    border: 1px solid #f0f0f0;
+}
+
+.post-detail-main h1 {
+    color: #2c3e50;
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.post-detail-main .post-meta {
+    color: #666;
+    font-size: 0.95rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 1rem 0;
+}
+
+.post-detail-main .post-meta span {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    padding: 0.5rem 1.2rem;
+    border-radius: 20px;
+    font-weight: 600;
+    color: #1976d2;
+    border: 1px solid #e1f5fe;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.post-detail-main .post-meta span:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.post-detail-main .post-tags {
+    margin-bottom: 1.5rem;
+}
+
+.post-detail-main .post-tags .tag {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+.post-detail-main .post-content {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    border-left: 5px solid #667eea;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+    line-height: 1.8;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
+.post-detail-main .post-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.post-detail-main .post-content p {
+    margin: 0;
+    font-weight: 400;
+    text-align: justify;
+    word-break: break-word;
+}
+
+.post-detail-main .post-image {
+    margin-bottom: 2rem;
+    text-align: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    border: 2px dashed #e1e5e9;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    position: relative;
+}
+
+.post-detail-main .post-image::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.post-detail-main .post-image img {
+    width: 100%;
+    height: auto;
+    max-height: 600px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    transition: transform 0.3s ease;
+}
+
+.post-detail-main .post-image img:hover {
+    transform: scale(1.05);
+}
+
+#post-detail-back {
+    margin-top: 1rem;
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+#post-detail-back:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .qa-detail-main {
@@ -749,6 +922,36 @@ body {
         flex-direction: column;
         gap: 0.5rem;
     }
+    
+    /* 貼文詳情頁面響應式 */
+    .post-detail-section {
+        padding: 1rem 0.5rem;
+    }
+    .post-detail-main {
+        padding: 1rem;
+    }
+    .post-detail-main h1 {
+        font-size: 1.8rem;
+    }
+    .post-detail-main .post-image {
+        padding: 1rem;
+    }
+    .post-detail-main .post-image img {
+        max-height: 400px;
+    }
+    
+    /* 貼文卡片響應式 */
+    .post-img {
+        height: 150px;
+    }
+    
+    /* 圖片預覽響應式 */
+    .image-preview {
+        padding: 1rem;
+    }
+    .image-preview img {
+        max-height: 200px;
+    }
 }
 
 /* Modal 與表單樣式（如前） */
@@ -904,17 +1107,22 @@ body {
 .image-preview {
     margin-top: 0.8rem;
     text-align: center;
-    padding: 1rem;
+    padding: 1.5rem;
     border: 2px dashed #e1e5e9;
-    border-radius: 8px;
+    border-radius: 12px;
     background: #f8f9fa;
 }
 
 .image-preview img {
     max-width: 100%;
-    max-height: 250px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    max-height: 300px;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    transition: transform 0.3s ease;
+}
+
+.image-preview img:hover {
+    transform: scale(1.05);
 }
 
 #removeImage {

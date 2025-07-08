@@ -57,16 +57,7 @@ class BlogApp {
             console.log('找不到 home-page 元素');
         }
         
-        // 設置貼文內容切換事件委托
-        const postsContainer = document.getElementById('postsContainer');
-        if (postsContainer) {
-            postsContainer.addEventListener('click', (e) => {
-                if (e.target.classList.contains('toggle-content-btn')) {
-                    const postId = e.target.getAttribute('data-post-id');
-                    this.togglePostContent(postId);
-                }
-            });
-        }
+
     }
 
     setupModalEvents() {
@@ -132,12 +123,14 @@ class BlogApp {
                 document.getElementById('posts-section').style.display = '';
                 document.getElementById('qa-section').style.display = 'none';
                 document.getElementById('qa-detail-section').style.display = 'none';
+                document.getElementById('post-detail-section').style.display = 'none';
                 document.getElementById('nav-posts').classList.add('active');
                 document.getElementById('nav-qa').classList.remove('active');
             } else {
                 document.getElementById('posts-section').style.display = 'none';
                 document.getElementById('qa-section').style.display = '';
                 document.getElementById('qa-detail-section').style.display = 'none';
+                document.getElementById('post-detail-section').style.display = 'none';
                 document.getElementById('nav-qa').classList.add('active');
                 document.getElementById('nav-posts').classList.remove('active');
             }
@@ -395,7 +388,7 @@ class BlogApp {
         
 
         const postsHTML = posts.map(post => `
-            <div class="post-card">
+            <div class="post-card" data-post-id="${post.id}" style="cursor: pointer;">
                 ${post.image ? `<div class="post-image"><img src="${post.image}" alt="${post.title}" class="post-img"></div>` : ''}
                 <div class="post-header">
                     <h3 class="post-title">${post.title}</h3>
@@ -405,14 +398,37 @@ class BlogApp {
                     </div>
                 </div>
                 ${post.tags ? `<div class="post-tags">${post.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
-                <div class="post-content" id="post-content-${post.id}">
-                    <p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}</p>
+                <div class="post-content">
+                    <p>${post.content.substring(0, 150)}${post.content.length > 150 ? '...' : ''}</p>
                 </div>
-                ${post.content.length > 100 ? `<button class="btn btn-outline-primary toggle-content-btn" data-post-id="${post.id}" id="toggle-btn-${post.id}">閱讀更多</button>` : ''}
+                <div class="post-actions">
+                    <button class="btn btn-outline-primary read-more-btn">閱讀全文</button>
+                </div>
             </div>
         `).join('');
 
         container.innerHTML = postsHTML;
+        
+        // 綁定點擊事件
+        container.querySelectorAll('.post-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                // 如果點擊的是按鈕，不觸發卡片點擊
+                if (e.target.classList.contains('read-more-btn')) {
+                    return;
+                }
+                const postId = card.getAttribute('data-post-id');
+                this.showPostDetail(postId);
+            });
+        });
+        
+        // 綁定按鈕點擊事件
+        container.querySelectorAll('.read-more-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const postId = e.target.closest('.post-card').getAttribute('data-post-id');
+                this.showPostDetail(postId);
+            });
+        });
     }
 
     // 分頁渲染
@@ -862,23 +878,81 @@ class BlogApp {
         });
     }
 
-    // 切換貼文內容顯示
-    togglePostContent(postId) {
-        const post = this.currentPosts.find(p => p.id === parseInt(postId));
-        if (!post) return;
-
-        const contentDiv = document.getElementById(`post-content-${postId}`);
-        const toggleBtn = document.getElementById(`toggle-btn-${postId}`);
+    // 顯示貼文詳情
+    async showPostDetail(postId) {
+        // 保存頁面狀態
+        this.savePageState('post-detail', { postId });
         
-        if (contentDiv.innerHTML.includes('...')) {
-            // 顯示完整內容
-            contentDiv.innerHTML = `<p>${post.content}</p>`;
-            toggleBtn.textContent = '收起';
-        } else {
-            // 顯示截斷內容
-            contentDiv.innerHTML = `<p>${post.content.substring(0, 100)}${post.content.length > 100 ? '...' : ''}</p>`;
-            toggleBtn.textContent = '閱讀更多';
+        // 隱藏其他區塊
+        document.getElementById('posts-section').style.display = 'none';
+        document.getElementById('qa-section').style.display = 'none';
+        document.getElementById('qa-detail-section').style.display = 'none';
+        document.getElementById('post-detail-section').style.display = 'block';
+        
+        // 更新導航狀態
+        document.getElementById('nav-posts').classList.remove('active');
+        document.getElementById('nav-qa').classList.remove('active');
+        
+        try {
+            // 從當前貼文列表中找到貼文
+            const post = this.currentPosts.find(p => p.id === parseInt(postId));
+            if (!post) {
+                throw new Error('貼文不存在');
+            }
+            
+            // 渲染貼文詳情
+            document.getElementById('post-detail-main').innerHTML = `
+                <h1>${post.title}</h1>
+                <div class="post-meta">
+                    <span><i class="fas fa-user"></i> ${post.author || '匿名'}</span>
+                    <span><i class="fas fa-calendar"></i> ${post.created_at}</span>
+                </div>
+                ${post.tags ? `<div class="post-tags">${post.tags.split(',').map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}</div>` : ''}
+                ${post.image ? `<div class="post-image"><img src="${post.image}" alt="${post.title}" style="width: 100%; height: auto; max-height: 600px; object-fit: cover; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); transition: transform 0.3s ease;"></div>` : ''}
+                <div class="post-content">
+                    <p>${post.content}</p>
+                </div>
+            `;
+            
+            // 綁定返回按鈕
+            document.getElementById('post-detail-back').onclick = () => {
+                this.hidePostDetail();
+            };
+            
+            // 為圖片添加懸停效果和響應式樣式
+            const detailImage = document.querySelector('.post-detail-main .post-image img');
+            if (detailImage) {
+                // 檢查是否為手機版
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    detailImage.style.maxHeight = '400px';
+                }
+                
+                detailImage.addEventListener('mouseenter', () => {
+                    detailImage.style.transform = 'scale(1.02)';
+                });
+                detailImage.addEventListener('mouseleave', () => {
+                    detailImage.style.transform = 'scale(1)';
+                });
+            }
+            
+        } catch (error) {
+            document.getElementById('post-detail-main').innerHTML = `
+                <h1>載入失敗</h1>
+                <p>無法載入貼文內容：${error.message}</p>
+            `;
         }
+    }
+    
+    // 隱藏貼文詳情
+    hidePostDetail() {
+        document.getElementById('post-detail-section').style.display = 'none';
+        document.getElementById('posts-section').style.display = 'block';
+        document.getElementById('nav-posts').classList.add('active');
+        this._currentTab = 'posts';
+        
+        // 清除保存的狀態
+        localStorage.removeItem('blogPageState');
     }
 
     // 處理登出
