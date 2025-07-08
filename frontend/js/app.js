@@ -48,6 +48,15 @@ class BlogApp {
         document.getElementById('newPostBtn').addEventListener('click', () => this.showModal('newPostModal'));
         document.getElementById('newQuestionBtn').addEventListener('click', () => this.showModal('questionModal'));
         
+        // 部落格標題回到貼文頁面
+        const homePage = document.getElementById('home-page');
+        if (homePage) {
+            homePage.addEventListener('click', () => this.goToHomePage());
+            console.log('home-page 事件監聽器已綁定');
+        } else {
+            console.log('找不到 home-page 元素');
+        }
+        
         // 設置貼文內容切換事件委托
         const postsContainer = document.getElementById('postsContainer');
         if (postsContainer) {
@@ -298,14 +307,12 @@ class BlogApp {
 
     // 載入所有標籤
     async loadAllTags() {
-        // 避免重複載入標籤
         if (this._loadingTags) {
             return;
         }
         this._loadingTags = true;
         
         try {
-            // 使用已載入的貼文資料來收集標籤，避免重複 API 調用
             const allTags = new Set();
             
             this.currentPosts.forEach(post => {
@@ -326,7 +333,6 @@ class BlogApp {
 
     // 渲染篩選標籤
     renderFilterTags(tags) {
-        // 保存當前選中的標籤
         const currentActiveTags = Array.from(document.querySelectorAll('.filter-tag.active'))
             .map(tag => tag.dataset.tag);
         
@@ -337,12 +343,10 @@ class BlogApp {
         }).join('');
         filterTagList.innerHTML = tagsHTML;
 
-        // 移除舊的事件監聽器
         if (this._filterTagsEventBound) {
             filterTagList.removeEventListener('click', this._filterTagsClickHandler);
         }
         
-        // 綁定新的事件監聽器
         this._filterTagsClickHandler = (e) => {
             if (e.target.classList.contains('filter-tag')) {
                 e.target.classList.toggle('active');
@@ -358,7 +362,6 @@ class BlogApp {
         const activeTags = Array.from(document.querySelectorAll('.filter-tag.active'))
             .map(tag => tag.dataset.tag);
         
-        // 顯示或隱藏清除篩選按鈕
         const clearFilterBtn = document.getElementById('clearFilterBtn');
         if (activeTags.length > 0) {
             clearFilterBtn.style.display = 'inline-block';
@@ -366,13 +369,10 @@ class BlogApp {
             clearFilterBtn.style.display = 'none';
         }
         
-        // 重新載入貼文，包含標籤篩選
         await this.loadPosts(1, '', activeTags);
     }
 
-    // 清除篩選
     clearFilter() {
-        // 清除所有選中的標籤
         document.querySelectorAll('.filter-tag.active').forEach(tag => {
             tag.classList.remove('active');
         });
@@ -508,8 +508,10 @@ class BlogApp {
         this.savePageState('qa-detail', { questionId });
         }
         
-        // 載入主題（包含回答和瀏覽記錄）
+                // 載入主題（包含回答和瀏覽記錄）
         const question = await API.getQuestion(questionId);
+        const likeIcon = question.is_liked ? '❤️' : '👍';
+        const likeText = question.is_liked ? '收回讚' : '讚';
         document.getElementById('qa-detail-main').innerHTML = `
             <h2>${question.title}</h2>
             <div class="post-meta">
@@ -520,8 +522,8 @@ class BlogApp {
                 <p>${question.content}</p>
             </div>
             <div class="question-actions">
-                <button id="like-question-btn" class="btn btn-outline-primary" data-question-id="${questionId}">
-                    👍 讚 (${question.likes})
+                <button id="like-question-btn" class="btn ${question.is_liked ? 'btn-primary' : 'btn-outline-primary'}" data-question-id="${questionId}" data-is-liked="${question.is_liked}">
+                    ${likeIcon} ${likeText} (${question.likes})
                 </button>
                 <span class="views-count">👁️ 瀏覽 ${question.views}</span>
             </div>
@@ -537,34 +539,44 @@ class BlogApp {
             }
             try {
                 const result = await API.likeQuestion(questionId);
-                document.getElementById('like-question-btn').innerHTML = `👍 讚 (${result.likes})`;
-                ErrorHandler.showSuccess('讚成功！');
+                const btn = document.getElementById('like-question-btn');
+                const likeIcon = result.is_liked ? '❤️' : '👍';
+                const likeText = result.is_liked ? '收回讚' : '讚';
+                
+                btn.innerHTML = `${likeIcon} ${likeText} (${result.likes})`;
+                btn.setAttribute('data-is-liked', result.is_liked);
+                btn.className = `btn ${result.is_liked ? 'btn-primary' : 'btn-outline-primary'}`;
+                
             } catch (error) {
                 if (error.message && (error.message.includes('登入') || error.message.includes('未授權') || error.message.includes('401'))) {
                     ErrorHandler.showError('請先登入');
                     this.showModal('loginModal');
                 } else {
-                ErrorHandler.showError('按讚失敗');
-            }
+                    ErrorHandler.showError('按讚失敗');
+                }
             }
         };
         
         // 使用 question.answers 而不是單獨呼叫 API
         const answers = question.answers || [];
-        document.getElementById('qa-detail-answers-list').innerHTML = answers.map(a => `
-            <div class="answer-item" data-answer-id="${a.id}">
-                <div class="post-meta">
-                    <span>留言者: ${a.author || '匿名'}</span>
-                    <span>留言時間: ${a.created_at}</span>
+        document.getElementById('qa-detail-answers-list').innerHTML = answers.map(a => {
+            const likeIcon = a.is_liked ? '❤️' : '👍';
+            const likeText = a.is_liked ? '收回讚' : '讚';
+            return `
+                <div class="answer-item" data-answer-id="${a.id}">
+                    <div class="post-meta">
+                        <span>留言者: ${a.author || '匿名'}</span>
+                        <span>留言時間: ${a.created_at}</span>
+                    </div>
+                    <p>${a.content}</p>
+                    <div class="answer-actions">
+                        <button class="btn ${a.is_liked ? 'btn-primary' : 'btn-outline-primary'} btn-sm like-answer-btn" data-answer-id="${a.id}" data-is-liked="${a.is_liked}">
+                            ${likeIcon} ${likeText} (${a.likes || 0})
+                        </button>
+                    </div>
                 </div>
-                <p>${a.content}</p>
-                <div class="answer-actions">
-                    <button class="btn btn-outline-primary btn-sm like-answer-btn" data-answer-id="${a.id}">
-                        👍 讚 (${a.likes || 0})
-                    </button>
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         
         // 綁定回答按讚事件
         document.querySelectorAll('.like-answer-btn').forEach(btn => {
@@ -580,8 +592,13 @@ class BlogApp {
                 
                 try {
                     const result = await API.likeAnswer(answerId);
-                    btn.innerHTML = `👍 讚 (${result.likes})`;
-                    ErrorHandler.showSuccess('讚成功！');
+                    const likeIcon = result.is_liked ? '❤️' : '👍';
+                    const likeText = result.is_liked ? '收回讚' : '讚';
+                    
+                    btn.innerHTML = `${likeIcon} ${likeText} (${result.likes})`;
+                    btn.setAttribute('data-is-liked', result.is_liked);
+                    btn.className = `btn ${result.is_liked ? 'btn-primary' : 'btn-outline-primary'} btn-sm like-answer-btn`;
+                    
                 } catch (error) {
                     if (error.message && (error.message.includes('登入') || error.message.includes('未授權') || error.message.includes('401'))) {
                         ErrorHandler.showError('請先登入');
@@ -623,7 +640,7 @@ class BlogApp {
                         </div>
                         <p>${newAnswer.content}</p>
                         <div class="answer-actions">
-                            <button class="btn btn-outline-primary btn-sm like-answer-btn" data-answer-id="${newAnswer.id}">
+                            <button class="btn btn-outline-primary btn-sm like-answer-btn" data-answer-id="${newAnswer.id}" data-is-liked="false">
                                 👍 讚 (${newAnswer.likes || 0})
                             </button>
                         </div>
@@ -645,8 +662,13 @@ class BlogApp {
                     
                     try {
                         const result = await API.likeAnswer(answerId);
-                        newAnswerBtn.innerHTML = `👍 讚 (${result.likes})`;
-                        ErrorHandler.showSuccess('讚成功！');
+                        const likeIcon = result.is_liked ? '❤️' : '👍';
+                        const likeText = result.is_liked ? '收回讚' : '讚';
+                        
+                        newAnswerBtn.innerHTML = `${likeIcon} ${likeText} (${result.likes})`;
+                        newAnswerBtn.setAttribute('data-is-liked', result.is_liked);
+                        newAnswerBtn.className = `btn ${result.is_liked ? 'btn-primary' : 'btn-outline-primary'} btn-sm like-answer-btn`;
+                        
                     } catch (error) {
                         if (error.message && (error.message.includes('登入') || error.message.includes('未授權') || error.message.includes('401'))) {
                             ErrorHandler.showError('請先登入');
@@ -657,17 +679,19 @@ class BlogApp {
                     }
                 });
                 document.getElementById('qa-detail-answer-content').value = '';
-                ErrorHandler.showSuccess('留言發布成功！');
             } catch (error) {
                 ErrorHandler.showError(error.message || '留言發布失敗');
             }
         };
         
         // 綁定返回按鈕
-        document.getElementById('qa-detail-back').onclick = () => {
+        document.getElementById('qa-detail-back').onclick = async () => {
             this.savePageState('qa-list');
             document.getElementById('qa-detail-section').style.display = 'none';
             document.getElementById('qa-section').style.display = '';
+            
+            // 重新載入問題列表以反映最新狀態
+            await this.loadQuestions();
         };
     }
 
@@ -758,7 +782,6 @@ class BlogApp {
         try {
             let res = await API.createPost(postFormData);            
             this.hideModal('newPostModal');
-            ErrorHandler.showSuccess('貼文發布成功！');
             
             // 重新載入貼文
             this.loadPosts();
@@ -781,7 +804,6 @@ class BlogApp {
             await API.createQuestion(questionData);
             
             this.hideModal('questionModal');
-            ErrorHandler.showSuccess('問題發布成功！');
             
             // 重新載入問題
             this.loadQuestions();
@@ -865,6 +887,26 @@ class BlogApp {
         ErrorHandler.showSuccess('已登出');
     }
     
+    // 回到貼文頁面
+    async goToHomePage() {
+        console.log('goToHomePage 被呼叫');
+        
+        // 切換到貼文頁面
+        document.getElementById('posts-section').style.display = '';
+        document.getElementById('qa-section').style.display = 'none';
+        document.getElementById('qa-detail-section').style.display = 'none';
+        
+        // 更新導航狀態
+        document.getElementById('nav-posts').classList.add('active');
+        document.getElementById('nav-qa').classList.remove('active');
+        this._currentTab = 'posts';
+        
+        // 重新載入貼文
+        await this.loadPosts(1);
+        
+        console.log('goToHomePage 完成');
+    }
+    
     // 保存頁面狀態
     savePageState(page, data = {}) {
         const state = {
@@ -891,30 +933,8 @@ class BlogApp {
                 return false;
             }
             
-            if (state.page === 'qa-detail' && state.data.questionId) {
-                if (!AuthManager.isLoggedIn()) {
-                    this.showModal('loginModal');
-                    return false;
-                }
-                // 恢復到 Q&A 詳細頁面
-                document.getElementById('posts-section').style.display = 'none';
-                document.getElementById('qa-section').style.display = 'none';
-                document.getElementById('qa-detail-section').style.display = '';
-                document.getElementById('nav-qa').classList.add('active');
-                document.getElementById('nav-posts').classList.remove('active');
-                this._currentTab = 'qa';
-                await this.showQADetail(state.data.questionId, true);
-                return true;
-            } else if (state.page === 'qa-list') {
-                // 恢復到 Q&A 列表
-                document.getElementById('posts-section').style.display = 'none';
-                document.getElementById('qa-section').style.display = '';
-                document.getElementById('qa-detail-section').style.display = 'none';
-                document.getElementById('nav-qa').classList.add('active');
-                document.getElementById('nav-posts').classList.remove('active');
-                this._currentTab = 'qa';
-                return true;
-            }
+            localStorage.removeItem('blogPageState');
+            return false;
         } catch (error) {
             console.error('恢復頁面狀態失敗:', error);
             localStorage.removeItem('blogPageState');

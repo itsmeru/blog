@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "corsheaders",
     "accounts",
     "posts",
@@ -125,6 +126,28 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# drf-spectacular 設定
+SPECTACULAR_SETTINGS = {
+    "TITLE": "部落格 API",
+    "DESCRIPTION": "部落格和問答系統的 API 文檔",
+    "VERSION": "1.0.0",
+}
+
+# drf-spectacular 設定
+SPECTACULAR_SETTINGS = {
+    "TITLE": "部落格 API",
+    "DESCRIPTION": "部落格和問答系統的 API 文檔",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+    },
 }
 
 CORS_ALLOWED_ORIGINS = [

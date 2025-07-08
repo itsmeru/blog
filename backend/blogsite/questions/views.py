@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from accounts.utils import login_check
-from questions.models import Question, Answer
+from questions.models import Question, Answer, QuestionLike, AnswerLike
 
 @csrf_exempt
 def questions_handler(request):
@@ -76,17 +76,33 @@ def get_question_detail(request, question_id):
         q.save()
     except Question.DoesNotExist:
         return JsonResponse({"message": "Question not found"}, status=404)
+    
+    # 檢查用戶是否已登入
+    user = getattr(request, 'account', None)
+    
+    # 檢查用戶是否已按讚問題
+    question_is_liked = False
+    if user:
+        question_is_liked = QuestionLike.objects.filter(user=user, question=q).exists()
+    
     answers = Answer.objects.filter(question=q).order_by('created_at')
-    answers_data = [
-        {
+    answers_data = []
+    
+    for a in answers:
+        # 檢查用戶是否已按讚回答
+        answer_is_liked = False
+        if user:
+            answer_is_liked = AnswerLike.objects.filter(user=user, answer=a).exists()
+        
+        answers_data.append({
             "id": a.id,
             "content": a.content,
             "created_at": a.created_at.strftime("%Y-%m-%d %H:%M"),
             "author": a.author.username if a.author else "匿名",
             "likes": a.likes,
-        }
-        for a in answers
-    ]
+            "is_liked": answer_is_liked,
+        })
+    
     data = {
         "id": q.id,
         "title": q.title,
@@ -96,6 +112,7 @@ def get_question_detail(request, question_id):
         "views": q.views,
         "likes": q.likes,
         "answer_count": q.answer_count,
+        "is_liked": question_is_liked,
         "answers": answers_data,
     }
     return JsonResponse(data)
@@ -165,11 +182,32 @@ def create_answer(request, question_id):
 def like_question(request, question_id):
     try:
         q = Question.objects.get(id=question_id)
-        q.likes += 1
-        q.save()
+        user = request.account
+        
+        # 檢查用戶是否已經按讚
+        like_record, created = QuestionLike.objects.get_or_create(
+            user=user,
+            question=q
+        )
+        
+        if created:
+            # 新按讚
+            q.likes += 1
+            q.save()
+            message = "按讚成功"
+            is_liked = True
+        else:
+            # 收回讚
+            like_record.delete()
+            q.likes = max(0, q.likes - 1)  # 確保不會變成負數
+            q.save()
+            message = "收回讚成功"
+            is_liked = False
+            
         return JsonResponse({
             "likes": q.likes,
-            "message": "按讚成功"
+            "is_liked": is_liked,
+            "message": message
         })
     except Question.DoesNotExist:
         return JsonResponse({"message": "Question not found"}, status=404)
@@ -198,11 +236,32 @@ def view_question(request, question_id):
 def like_answer(request, answer_id):
     try:
         a = Answer.objects.get(id=answer_id)
-        a.likes += 1
-        a.save()
+        user = request.account
+        
+        # 檢查用戶是否已經按讚
+        like_record, created = AnswerLike.objects.get_or_create(
+            user=user,
+            answer=a
+        )
+        
+        if created:
+            # 新按讚
+            a.likes += 1
+            a.save()
+            message = "按讚成功"
+            is_liked = True
+        else:
+            # 收回讚
+            like_record.delete()
+            a.likes = max(0, a.likes - 1)  # 確保不會變成負數
+            a.save()
+            message = "收回讚成功"
+            is_liked = False
+            
         return JsonResponse({
             "likes": a.likes,
-            "message": "按讚成功"
+            "is_liked": is_liked,
+            "message": message
         })
     except Answer.DoesNotExist:
         return JsonResponse({"message": "Answer not found"}, status=404)
