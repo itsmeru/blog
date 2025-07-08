@@ -765,8 +765,10 @@ body {
     padding: 2rem;
     border-radius: 8px;
     width: 90%;
-    max-width: 400px;
+    max-width: 600px;
     position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 .close {
     position: absolute;
@@ -776,7 +778,11 @@ body {
     cursor: pointer;
 }
 .form-group {
-    margin-bottom: 1.2rem;
+    margin-bottom: 1.5rem;
+}
+
+.post-form .form-group {
+    margin-bottom: 2rem;
 }
 .form-group label {
     display: block;
@@ -792,6 +798,12 @@ body {
     border-radius: 5px;
     font-size: 1rem;
     transition: border-color 0.3s ease;
+    font-family: inherit;
+}
+
+.post-form textarea {
+    min-height: 150px;
+    resize: vertical;
 }
 .form-group input:focus,
 .form-group textarea:focus {
@@ -805,9 +817,9 @@ body {
 }
 
 .tag-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.5rem;
     margin-bottom: 0.8rem;
 }
 
@@ -892,13 +904,17 @@ body {
 .image-preview {
     margin-top: 0.8rem;
     text-align: center;
+    padding: 1rem;
+    border: 2px dashed #e1e5e9;
+    border-radius: 8px;
+    background: #f8f9fa;
 }
 
 .image-preview img {
     max-width: 100%;
-    max-height: 200px;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    max-height: 250px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 #removeImage {

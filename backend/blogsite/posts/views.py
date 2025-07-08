@@ -1,99 +1,65 @@
-import base64
 
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import AllowAny
 from accounts.utils import login_check
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from posts.models import Post
+from .serializers import PostSerializer, PostCreateSerializer, PostListQuerySerializer
 
 
-@csrf_exempt
-def posts_handler(request):
-    if request.method == "POST":
-        return create_post(request)
-    elif request.method == "GET":
-        return get_posts(request)
-    else:
-        return JsonResponse({"message": "Method not allowed"}, status=405)
-
-
-@csrf_exempt
-@login_check
-@require_http_methods(["POST"])
-def create_post(request):
-    try:
-        # 處理表單資料
-        title = request.POST.get("title")
-        content = request.POST.get("content")
-        tags = request.POST.get("tags", "")
-        image_file = request.FILES.get("image")
-        author = request.account
-        
-        # 處理圖片
-        image_data = None
-        image_type = None
-        if image_file:
-            image_data = image_file.read()
-            image_type = image_file.content_type
-        
-        # 創建貼文
-        post = Post.objects.create(
-            title=title,
-            content=content,
-            tags=tags,
-            image=image_data,
-            image_type=image_type,
-            author=author
-        )
-        
-        return JsonResponse({
-            "message": "Post created successfully",
-            "post_id": post.id
-        })
-    except Exception as e:
-        return JsonResponse({"message": f"Error creating post: {str(e)}"}, status=400)
-
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def get_posts(request):
-    page = request.GET.get("page", 1)
-    size = request.GET.get("size", 3)
-    keyword = request.GET.get("keyword", "")
-    tags = request.GET.get("tags", "")
-    order_by = request.GET.get("order", "desc")
-    order_by = "-created_at" if order_by == "desc" else "created_at"
-
-    posts_page = Post.get_posts(page, size, keyword, order_by, tags)
-
-    posts_data = []
-    for post in posts_page:
-        image_data = None
-        if post.image and isinstance(post.image, bytes):
-            try:
-                image_data = f"data:{post.image_type};base64,{base64.b64encode(post.image).decode('utf-8')}"
-            except Exception as e:
-                print(f"圖片編碼錯誤: {e}")
-                image_data = None
-        
-        posts_data.append({
-            "id": post.id,
-            "title": post.title,
-            "content": post.content,
-            "tags": post.tags,
-            "image": image_data,
-            "author": post.author.username,
-            "created_at": (
-                post.created_at.strftime("%Y-%m-%d %H:%M") if post.created_at else None
-            ),
-        })
+class PostViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all()
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [AllowAny]
+    serializer_class = PostSerializer
     
-    return JsonResponse(
-        {
-            "posts": posts_data,
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return PostCreateSerializer
+        return PostSerializer
+
+    def list(self, request):
+        """獲取貼文列表"""
+        # 驗證查詢參數
+        query_serializer = PostListQuerySerializer(data=request.query_params)
+        if not query_serializer.is_valid():
+            return Response({
+                "message": "Invalid query parameters",
+                "errors": query_serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 獲取驗證後的參數
+        validated_data = query_serializer.validated_data
+        page = validated_data['page']
+        size = validated_data['size']
+        keyword = validated_data['keyword']
+        tags = validated_data['tags']
+        order_by = validated_data['order']
+        order_field = "-created_at" if order_by == "desc" else "created_at"
+
+        posts_page = Post.get_posts(page, size, keyword, order_field, tags)
+        
+        serializer = PostSerializer(posts_page, many=True) # True -> 列表, False -> 字典
+        
+        return Response({
+            "posts": serializer.data,
             "total": posts_page.paginator.count,
             "num_pages": posts_page.paginator.num_pages,
             "current_page": posts_page.number,
-        }
-    )
+        })
 
+    @login_check
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            post = serializer.save()
+            return Response({
+                "message": "Post created successfully",
+                "post_id": post.id
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                "message": "Validation error",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
