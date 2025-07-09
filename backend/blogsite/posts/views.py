@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from accounts.utils import login_check
 from posts.models import Post
 from .serializers import PostSerializer, PostCreateSerializer, PostListQuerySerializer
@@ -13,15 +14,26 @@ class PostViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [AllowAny]
     serializer_class = PostSerializer
+    http_method_names = ['get', 'post']
     
     def get_serializer_class(self):
         if self.action == 'create':
             return PostCreateSerializer
         return PostSerializer
 
+    @extend_schema(
+        summary="取得貼文列表",
+        description="取得分頁的貼文列表，支援搜尋和標籤篩選",
+        parameters=[
+            OpenApiParameter(name='page', type=int, default=1, required=True, description='頁碼'),
+            OpenApiParameter(name='size', type=int, default=3, required=True, description='每頁數量'),
+            OpenApiParameter(name='keyword', type=str, description='搜尋關鍵字'),
+            OpenApiParameter(name='tags', type=str, description='標籤篩選（逗號分隔）'),
+            OpenApiParameter(name='order', type=str, default='desc', enum=['asc', 'desc'], description='排序方式'),
+        ]
+    )
     def list(self, request):
-        """獲取貼文列表"""
-        # 驗證查詢參數
+        """取得貼文列表"""
         query_serializer = PostListQuerySerializer(data=request.query_params)
         if not query_serializer.is_valid():
             return Response({
@@ -29,7 +41,6 @@ class PostViewSet(viewsets.ModelViewSet):
                 "errors": query_serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 獲取驗證後的參數
         validated_data = query_serializer.validated_data
         page = validated_data['page']
         size = validated_data['size']
@@ -40,7 +51,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
         posts_page = Post.get_posts(page, size, keyword, order_field, tags)
         
-        serializer = PostSerializer(posts_page, many=True) # True -> 列表, False -> 字典
+        serializer = PostSerializer(posts_page, many=True)
         
         return Response({
             "posts": serializer.data,
@@ -63,3 +74,8 @@ class PostViewSet(viewsets.ModelViewSet):
                 "message": "Validation error",
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @extend_schema(exclude=True)
+    def retrieve(self, request, *args, **kwargs):
+        """隱藏此端點"""
+        pass

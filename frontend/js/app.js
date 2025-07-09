@@ -472,7 +472,8 @@ class BlogApp {
         LoadingManager.show(container);
 
         try {
-            const questions = await API.getQuestions();
+            const response = await API.getQuestions();
+            const questions = response.questions || response; // 支援新舊格式
             this.currentQuestions = questions; // 保存問題資料
             this.renderQuestions(questions);
         } catch (error) {
@@ -525,7 +526,7 @@ class BlogApp {
         }
         
                 // 載入主題（包含回答和瀏覽記錄）
-        const question = await API.getQuestion(questionId);
+        const question = await API.getQuestionDetail(questionId);
         const likeIcon = question.is_liked ? '❤️' : '👍';
         const likeText = question.is_liked ? '收回讚' : '讚';
         document.getElementById('qa-detail-main').innerHTML = `

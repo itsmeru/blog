@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 from .models import Post
 
 
@@ -26,6 +28,7 @@ class PostSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'content', 'tags', 'image', 'author', 'created_at']
         read_only_fields = ['id', 'author', 'created_at']
     
+    @extend_schema_field(OpenApiTypes.STR)
     def get_image(self, obj):
         """獲取圖片數據"""
         return obj.get_image_data_url()

@@ -183,8 +183,9 @@ class API {
     }
 
     // 問答 API
-    static async getQuestions() {
-        return this.request('/questions/');
+    static async getQuestions(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        return this.request(`/questions/?${query}`);
     }
 
     static async createQuestion(questionData) {
@@ -195,26 +196,10 @@ class API {
         });
     }
 
-    static async getQuestion(questionId) {
-        return this.request(`/questions/${questionId}/`);
+    static async getQuestionDetail(questionId) {
+        return this.request(`/questions/${questionId}/answers/`);
     }
 
-    static async updateQuestion(id, questionData) {
-        return this.request(`/questions/${id}/`, {
-            method: 'PUT',
-            body: JSON.stringify(questionData),
-            credentials: 'include',
-        });
-    }
-
-    static async deleteQuestion(id) {
-        return this.request(`/questions/${id}/`, {
-            method: 'DELETE',
-            credentials: 'include',
-        });
-    }
-
-    // 回答 API
     static async createAnswer(questionId, data) {
         return this.request(`/questions/${questionId}/answers/`, {
             method: 'POST',
@@ -231,7 +216,15 @@ class API {
     }
 
     static async likeAnswer(answerId) {
-        return this.request(`/questions/answers/${answerId}/like/`, {
+        return this.request('/questions/like_answer/', {
+            method: 'POST',
+            body: JSON.stringify({ answer_id: answerId }),
+            credentials: 'include',
+        });
+    }
+
+    static async viewQuestion(questionId) {
+        return this.request(`/questions/${questionId}/view/`, {
             method: 'POST',
             credentials: 'include',
         });
