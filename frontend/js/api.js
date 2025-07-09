@@ -14,8 +14,9 @@ class API {
         };
 
         // 如果有 access token，添加到 headers
-        if (AuthManager.getAccessToken()) {
-            defaultOptions.headers['Authorization'] = `Bearer ${AuthManager.getAccessToken()}`;
+        const token = AuthManager.getAccessToken();
+        if (token) {
+            defaultOptions.headers['Authorization'] = `Bearer ${token}`;
         }
 
         const config = {
@@ -28,10 +29,10 @@ class API {
         };
 
         try {
-            const response = await fetch(url, config);            
+            const response = await fetch(url, config);
+            
             const data = await response.json();
 
-            // 如果 token 過期，嘗試刷新
             if (response.status === 401 && AuthManager.getAccessToken() && !this._refreshingToken) {
                 this._refreshingToken = true;
                 try {
@@ -61,6 +62,20 @@ class API {
                 if (response.status === 401) {
                     AuthManager.clearAccessToken();
                 }
+                
+                // 處理驗證錯誤
+                if (response.status === 400 && data.errors) {
+                    const errorMessages = [];
+                    for (const field in data.errors) {
+                        if (Array.isArray(data.errors[field])) {
+                            errorMessages.push(...data.errors[field]);
+                        } else {
+                            errorMessages.push(data.errors[field]);
+                        }
+                    }
+                    throw new Error(errorMessages.join(', '));
+                }
+                
                 throw new Error(data.message || data.error || '請求失敗');
             }
 
@@ -101,6 +116,14 @@ class API {
 
         // 設置 access token
         AuthManager.setAccessToken(data.access_token);
+        
+        // 保存用戶名（從後端響應中獲取）
+        if (data.username) {
+            localStorage.setItem('username', data.username);
+        } else if (credentials.email) {
+            localStorage.setItem('username', credentials.email.split('@')[0]); // 備用方案
+        }
+        
         return data;
     }
 
@@ -200,6 +223,21 @@ class API {
         return this.request(`/questions/${questionId}/answers/`);
     }
 
+    static async deleteQuestion(questionId) {
+        return this.request(`/questions/${questionId}/`, {
+            method: 'DELETE',
+            credentials: 'include',
+        });
+    }
+
+    static async deleteAnswer(answerId) {
+        return this.request('/questions/delete_answer/', {
+            method: 'POST',
+            body: JSON.stringify({ answer_id: answerId }),
+            credentials: 'include',
+        });
+    }
+
     static async createAnswer(questionId, data) {
         return this.request(`/questions/${questionId}/answers/`, {
             method: 'POST',
@@ -237,14 +275,25 @@ class AuthManager {
     
     static setAccessToken(token) {
         this.accessToken = token;
+        // 持久化保存到 localStorage
+        if (token) {
+            localStorage.setItem('accessToken', token);
+        } else {
+            localStorage.removeItem('accessToken');
+        }
     }
     
     static getAccessToken() {
+        // 如果記憶體中沒有，從 localStorage 讀取
+        if (!this.accessToken) {
+            this.accessToken = localStorage.getItem('accessToken');
+        }
         return this.accessToken;
     }
     
     static clearAccessToken() {
         this.accessToken = null;
+        localStorage.removeItem('accessToken');
     }
     
 
@@ -253,9 +302,8 @@ class AuthManager {
     }
 
     static getUsername() {
-        // 從 token 中解析用戶名（簡單實現）
-        // 實際應用中可能需要從後端獲取用戶資訊
-        return '用戶';
+        // 從 localStorage 獲取用戶名
+        return localStorage.getItem('username') || '用戶';
     }
 
     // 檢查並恢復登入狀態
@@ -297,6 +345,9 @@ class AuthManager {
         this._loggingOut = true;
         
         this.clearAccessToken();
+        localStorage.removeItem('username'); // 清除用戶名
+        localStorage.removeItem('accessToken'); // 確保清除 token
+        
         // 清除 refresh token cookie
         try {
         await fetch(`${API_BASE_URL}/auth/logout/`,{

@@ -93,7 +93,10 @@ def login(request):
             )
 
         access_token, refresh_token = generate_token(account)
-        response = JsonResponse({"access_token": access_token})
+        response = JsonResponse({
+            "access_token": access_token,
+            "username": account.username
+        })
         response.set_cookie(
             "refresh_token",
             refresh_token,

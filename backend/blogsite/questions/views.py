@@ -16,6 +16,7 @@ from questions.serializers import (
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     permission_classes = [AllowAny]
+    http_method_names = ['get', 'post', 'delete']
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -75,8 +76,35 @@ class QuestionViewSet(viewsets.ModelViewSet):
         else:
             return Response({
                 "message": "Validation error",
-                "errors": serializer.errors
+                "errors": serializer.errors,
+                "received_data": request.data
             }, status=status.HTTP_400_BAD_REQUEST)
+
+    @login_check
+    def destroy(self, request, pk=None):
+        """刪除問題"""
+        try:
+            question: Question = self.get_object()
+            
+            if question.author != request.account:
+                return Response({
+                    "message": "您沒有權限刪除此問題"
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            question.delete()
+            
+            return Response({
+                "message": "問題刪除成功"
+            }, status=status.HTTP_204_NO_CONTENT)
+            
+        except Question.DoesNotExist:
+            return Response({
+                "message": "Question not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                "message": f"刪除失敗: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @extend_schema(exclude=True)
     def retrieve(self, request, *args, **kwargs):
@@ -84,11 +112,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
         pass
 
     @action(detail=True, methods=['get', 'post'])
-    @login_check
     def answers(self, request, pk=None):
         """取得問題詳情和回答，或新增回答"""
         try:
-            question = self.get_object()
+            question: Question = self.get_object()
             # 自動增加瀏覽數
             question.increment_views()
         except Question.DoesNotExist:
@@ -96,10 +123,35 @@ class QuestionViewSet(viewsets.ModelViewSet):
         
         if request.method == 'GET':
             # 使用模型的業務邏輯獲取詳情數據
-            data = question.get_detail_data(user=request.account)
+            # 檢查用戶是否已登入
+            user = None
+            if hasattr(request, 'account'):
+                user = request.account
+            data = question.get_detail_data(user=user)
             return Response(data)
         
         elif request.method == 'POST':
+            # 使用 login_check 裝飾器的邏輯來檢查登入
+            auth_header = request.META.get("HTTP_AUTHORIZATION")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return Response({
+                    "message": "請先登入後再發表留言"
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            token = auth_header.split(" ")[1]
+            try:
+                import jwt
+                from accounts.models import Account
+                from django.conf import settings
+                payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+                user_id = payload.get("user_id")
+                account = Account.objects.get(id=user_id)
+                request.account = account
+            except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, Account.DoesNotExist):
+                return Response({
+                    "message": "登入已過期，請重新登入"
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
             try:
                 data = json.loads(request.body)
                 content = data.get("content")
@@ -135,7 +187,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
     def like(self, request, pk=None):
         """按讚/收回讚問題"""
         try:
-            question = self.get_object()
+            question: Question = self.get_object()  # 添加類型註解
             is_liked, message = question.toggle_like(request.account)
             
             # 使用序列化器進行輸出驗證
@@ -154,7 +206,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
     def view(self, request, pk=None):
         """增加問題瀏覽數"""
         try:
-            question = self.get_object()
+            question: Question = self.get_object()  # 添加類型註解
             question.increment_views()
             
             # 使用序列化器進行輸出驗證
@@ -177,11 +229,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
             answer = Answer.objects.get(id=answer_id)
             is_liked, message = answer.toggle_like(request.account)
             
-            # 使用序列化器進行輸出驗證
             answer_data = {
                 "id": answer.id,
                 "content": answer.content,
-                "created_at": answer.created_at,  # 傳入 datetime 對象
+                "created_at": answer.created_at,
                 "author": answer.author.username if answer.author else "匿名",
                 "likes": answer.likes,
                 "is_liked": is_liked,
@@ -197,3 +248,33 @@ class QuestionViewSet(viewsets.ModelViewSet):
             return Response({"message": "Answer not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"message": f"按讚失敗: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
+    @login_check
+    def delete_answer(self, request):
+        """刪除回答"""
+        try:
+            answer_id = request.data.get('answer_id')
+            answer = Answer.objects.get(id=answer_id)
+            
+            # 檢查用戶是否有權限刪除（只能刪除自己的回答）
+            if answer.author != request.account:
+                return Response({
+                    "message": "您沒有權限刪除此回答"
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            # 刪除回答
+            answer.delete()
+            
+            return Response({
+                "message": "回答刪除成功"
+            }, status=status.HTTP_200_OK)
+            
+        except Answer.DoesNotExist:
+            return Response({
+                "message": "Answer not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                "message": f"刪除失敗: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

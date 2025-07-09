@@ -14,7 +14,7 @@ class PostViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [AllowAny]
     serializer_class = PostSerializer
-    http_method_names = ['get', 'post']
+    http_method_names = ['get', 'post', 'delete']
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -74,6 +74,32 @@ class PostViewSet(viewsets.ModelViewSet):
                 "message": "Validation error",
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
+    
+    @login_check
+    def destroy(self, request, pk=None):
+        """刪除貼文"""
+        try:
+            post = self.get_object()
+            
+            if post.author != request.account:
+                return Response({
+                    "message": "您沒有權限刪除此貼文"
+                }, status=status.HTTP_403_FORBIDDEN)
+            
+            post.delete()
+            
+            return Response({
+                "message": "貼文刪除成功"
+            }, status=status.HTTP_200_OK)
+            
+        except Post.DoesNotExist:
+            return Response({
+                "message": "Post not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                "message": f"刪除失敗: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @extend_schema(exclude=True)
     def retrieve(self, request, *args, **kwargs):
