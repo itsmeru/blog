@@ -1,22 +1,34 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.types import OpenApiTypes
-from questions.models import Question, QuestionLike, Answer, AnswerLike
+from questions.models import Question, QuestionLike
 
 class QuestionSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source='author.username', read_only=True)
     created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)
     is_liked = serializers.SerializerMethodField()
+    is_author = serializers.SerializerMethodField()
     
     class Meta:
         model = Question
-        fields = ['id', 'title', 'content', 'tags', 'created_at', 'author', 'views', 'likes', 'answer_count', 'is_liked']
+        fields = [
+            'id', 'title', 'content', 'tags', 'created_at',
+            'author', 'views', 'likes', 'answer_count', 'is_liked',
+            'is_author'
+        ]
     
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if request and hasattr(request, 'account'):
             return QuestionLike.objects.filter(user=request.account, question=obj).exists()
+        return False
+    
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_is_author(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'account'):
+            return obj.author == request.account
         return False
 
 class QuestionCreateSerializer(serializers.ModelSerializer):
@@ -38,13 +50,13 @@ class QuestionListQuerySerializer(serializers.Serializer):
     page = serializers.IntegerField(default=1, min_value=1)
     size = serializers.IntegerField(default=5, min_value=1, max_value=50)
     keyword = serializers.CharField(required=False, allow_blank=True, default='')
-    order = serializers.ChoiceField(choices=['asc', 'desc', 'hot'], default='desc')
+    sort = serializers.ChoiceField(choices=['latest', 'hot'], default='latest')
 
 class AnswerSerializer(serializers.Serializer):
     """用於 Answer 響應的序列化器"""
     id = serializers.IntegerField()
     content = serializers.CharField()
-    created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M')  # 統一時間格式
+    created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M')
     author = serializers.CharField()
     likes = serializers.IntegerField()
     is_liked = serializers.BooleanField()

@@ -30,7 +30,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
             OpenApiParameter(name='page', type=int, default=1, required=True, description='頁碼'),
             OpenApiParameter(name='size', type=int, default=5, required=True, description='每頁數量'),
             OpenApiParameter(name='keyword', type=str, description='搜尋關鍵字'),
-            OpenApiParameter(name='order', type=str, default='desc', enum=['asc', 'desc'], description='排序方式'),
+            OpenApiParameter(name='order_fielde', type=str, default='-created_at', enum=['-created_at', '-hot'], description='排序方式'),
         ]
     )
     def list(self, request):
@@ -46,15 +46,13 @@ class QuestionViewSet(viewsets.ModelViewSet):
         page = validated_data['page']
         size = validated_data['size']
         keyword = validated_data['keyword']
-        order_by = validated_data['order']
+        sort = validated_data['sort']
         
-        # 處理排序邏輯
-        if order_by == "hot":
-            order_field = "hot"
-        elif order_by == "desc":
-            order_field = "-created_at"
-        else:
-            order_field = "created_at"
+        # 將語義化的排序參數轉換為資料庫欄位
+        if sort == 'hot':
+            order_field = 'hot'
+        else:  # latest
+            order_field = '-created_at'
 
         questions_page = Question.get_questions(page, size, keyword, order_field)
         serializer = QuestionSerializer(questions_page, many=True, context={'request': request})
@@ -102,7 +100,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
             
             question.delete()
             
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({"message": "Question deleted successfully"})
             
         except Question.DoesNotExist:
             return Response({

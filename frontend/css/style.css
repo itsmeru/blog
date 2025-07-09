@@ -43,6 +43,15 @@ body {
     font-size: 1.5rem;
 }
 
+#home-page {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+#home-page:hover {
+    color: #ffd700;
+}
+
 .nav-menu {
     display: flex;
     gap: 2rem;

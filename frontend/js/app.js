@@ -12,7 +12,6 @@ class BlogApp {
     }
 
     async init() {
-        // 防止重複初始化
         if (this._initialized) {
             return;
         }
@@ -21,7 +20,6 @@ class BlogApp {
         // 先檢查並恢復登入狀態
         await AuthManager.checkAuthStatus();
         
-        // 設置事件監聽器
         this.setupEventListeners();
         this.setupModalEvents();
         this.setupFormEvents();
@@ -31,7 +29,6 @@ class BlogApp {
         this.updateAuthUI();
         this.setupNavigationEvents();
         
-        // 載入初始資料
         await this.loadInitialData();
     }
 
@@ -45,8 +42,7 @@ class BlogApp {
         document.getElementById('newPostBtn').addEventListener('click', () => this.showModal('newPostModal'));
         document.getElementById('newQuestionBtn').addEventListener('click', () => this.showModal('questionModal'));
         
-        // 部落格標題回到貼文頁面
-        const homePage = document.getElementById('home-page');
+        const homePage = document.getElementById('home-page');        
         if (homePage) {
             homePage.addEventListener('click', () => this.goToHomePage());
         }
@@ -100,7 +96,6 @@ class BlogApp {
     }
 
     setupNavigationEvents() {
-        // 防止重複綁定事件
         if (this._navigationEventsSetup) {
             return;
         }
@@ -128,7 +123,6 @@ class BlogApp {
                 document.getElementById('nav-qa').classList.add('active');
                 document.getElementById('nav-posts').classList.remove('active');
             }
-            // 記錄目前分頁
             localStorage.setItem('blogTab', tab);
         };
     
@@ -141,10 +135,7 @@ class BlogApp {
             showTab('qa');
         };
     
-        // 初始化時設置預設分頁，但不觸發載入
-        this.initializeDefaultTab(showTab);
-        
-        // 設置Q&A標籤事件
+        this.initializeDefaultTab(showTab); 
         this.setupQATabs();
     }
 
@@ -174,18 +165,15 @@ class BlogApp {
         }
     }
 
-    // 新增：初始化預設分頁但不觸發資料載入
     initializeDefaultTab(showTab) {
         const savedState = localStorage.getItem('blogPageState');
         if (savedState) {
-            // 如果有保存的頁面狀態，不要自動切換分頁
             return;
         }
         
             const savedTab = localStorage.getItem('blogTab');
         const defaultTab = savedTab === 'qa' ? 'qa' : 'posts';
         
-        // 設置 UI 狀態但不觸發資料載入
         this._currentTab = defaultTab;
         if (defaultTab === 'qa') {
             document.getElementById('posts-section').style.display = 'none';
@@ -232,13 +220,11 @@ class BlogApp {
 
     hideModal(modalId) {
         document.getElementById(modalId).style.display = 'none';
-        // 清空表單
         const form = document.getElementById(modalId).querySelector('form');
         if (form) form.reset();
     }
 
         updateAuthUI() {
-        // 防止重複更新
         if (this._updatingAuthUI) {
             return;
         }
@@ -259,7 +245,6 @@ class BlogApp {
                 userMenu.style.display = 'flex';
                 username.textContent = AuthManager.getUsername() || '用戶';
                 
-                // 顯示發布按鈕
                 if (newPostBtn) newPostBtn.style.display = 'inline-block';
                 if (newQuestionBtn) newQuestionBtn.style.display = 'inline-block';
             } else {
@@ -267,12 +252,10 @@ class BlogApp {
                 registerBtn.style.display = 'inline-block';
                 userMenu.style.display = 'none';
                 
-                // 隱藏發布按鈕
                 if (newPostBtn) newPostBtn.style.display = 'none';
                 if (newQuestionBtn) newQuestionBtn.style.display = 'none';
             }
             
-            // 如果在問答詳情頁面，更新留言表單顯示
             const qaDetailSection = document.getElementById('qa-detail-section');
             if (qaDetailSection && qaDetailSection.style.display !== 'none') {
                 const answerFormContainer = document.querySelector('.qa-detail-answer-form');
@@ -287,7 +270,6 @@ class BlogApp {
                             </form>
                         `;
                         
-                        // 重新綁定送出留言事件
                         const form = document.getElementById('qa-detail-answer-form');
                         if (form) {
                             form.onsubmit = async (e) => {
@@ -315,7 +297,6 @@ class BlogApp {
                             };
                         }
                     } else {
-                        // 未登入：顯示登入提示
                         answerFormContainer.innerHTML = `
                             <div class="login-prompt">
                                 <h3>發表留言</h3>
@@ -334,14 +315,12 @@ class BlogApp {
 
 
         async loadInitialData() {
-        // 避免重複載入
         if (this._loadingInitialData) {
             return;
         }
         this._loadingInitialData = true;
         
         try {
-            // 總是載入貼文和問題列表
             await this.loadPosts();
             await this.loadQuestions();
         } finally {
@@ -553,7 +532,13 @@ class BlogApp {
         LoadingManager.show(container);
 
         try {
-            const response = await API.getQuestions({ order: order });
+            // 將前端的 order 參數轉換為後端期望的 sort 參數
+            let sort = 'latest'; // 預設最新排序
+            if (order === 'hot') {
+                sort = 'hot';
+            }
+            
+            const response = await API.getQuestions({ sort: sort });
             const questions = response.questions || response; // 支援新舊格式
             this.currentQuestions = questions; // 保存問題資料
             this.renderQuestions(questions);
@@ -1141,20 +1126,15 @@ class BlogApp {
 
     // 顯示貼文詳情
     async showPostDetail(postId) {
-        // 移除狀態保存邏輯，避免重新整理時的循環問題
-        
-        // 隱藏其他區塊
         document.getElementById('posts-section').style.display = 'none';
         document.getElementById('qa-section').style.display = 'none';
         document.getElementById('qa-detail-section').style.display = 'none';
         document.getElementById('post-detail-section').style.display = 'block';
         
-        // 更新導航狀態
         document.getElementById('nav-posts').classList.remove('active');
         document.getElementById('nav-qa').classList.remove('active');
         
         try {
-            // 從當前貼文列表中找到貼文
             const post = this.currentPosts.find(p => p.id === parseInt(postId));
             if (!post) {
                 throw new Error('貼文不存在');
@@ -1162,7 +1142,6 @@ class BlogApp {
             
             const isPostAuthor = AuthManager.isLoggedIn() && post.author === AuthManager.getUsername();
             
-            // 渲染貼文詳情
             document.getElementById('post-detail-main').innerHTML = `
                 <h1>${post.title}</h1>
                 <div class="post-meta">
@@ -1177,12 +1156,10 @@ class BlogApp {
                 ${isPostAuthor ? `<button id="delete-post-detail-btn" class="btn btn-danger" data-post-id="${postId}">🗑️ 刪除貼文</button>` : ''}
             `;
             
-            // 綁定返回按鈕
             document.getElementById('post-detail-back').onclick = () => {
                 this.hidePostDetail();
             };
             
-            // 綁定貼文刪除按鈕
             const deletePostDetailBtn = document.getElementById('delete-post-detail-btn');
             if (deletePostDetailBtn) {
                 deletePostDetailBtn.onclick = async () => {
@@ -1199,7 +1176,6 @@ class BlogApp {
                     try {
                         await API.deletePost(postId);
                         ErrorHandler.showSuccess('貼文已刪除');
-                        // 返回貼文列表
                         this.hidePostDetail();
                         await this.loadPosts();
                     } catch (error) {
@@ -1213,10 +1189,8 @@ class BlogApp {
                 };
             }
             
-            // 為圖片添加懸停效果和響應式樣式
             const detailImage = document.querySelector('.post-detail-main .post-image img');
             if (detailImage) {
-                // 檢查是否為手機版
                 const isMobile = window.innerWidth <= 768;
                 if (isMobile) {
                     detailImage.style.maxHeight = '400px';
@@ -1238,23 +1212,19 @@ class BlogApp {
         }
     }
     
-    // 隱藏貼文詳情
     hidePostDetail() {
         document.getElementById('post-detail-section').style.display = 'none';
         document.getElementById('posts-section').style.display = 'block';
         document.getElementById('nav-posts').classList.add('active');
         this._currentTab = 'posts';
         
-        // 清除保存的狀態
         localStorage.removeItem('blogPageState');
     }
 
-    // 處理登出
     async handleLogout() {
         await AuthManager.logout();
         ErrorHandler.showSuccess('已登出');
         
-        // 如果在問答詳情頁面，重新載入以更新留言表單
         const qaDetailSection = document.getElementById('qa-detail-section');
         if (qaDetailSection && qaDetailSection.style.display !== 'none') {
             const questionId = this.getCurrentQuestionId();
@@ -1268,22 +1238,18 @@ class BlogApp {
     async goToHomePage() {
         console.log('goToHomePage 被呼叫');
         
-        // 切換到貼文頁面
         document.getElementById('posts-section').style.display = '';
         document.getElementById('qa-section').style.display = 'none';
         document.getElementById('qa-detail-section').style.display = 'none';
         
-        // 更新導航狀態
         document.getElementById('nav-posts').classList.add('active');
         document.getElementById('nav-qa').classList.remove('active');
         this._currentTab = 'posts';
         
-        // 重新載入貼文
         await this.loadPosts(1);
         
     }
     
-    // 保存頁面狀態
     savePageState(page, data = {}) {
         const state = {
             page: page,
@@ -1293,7 +1259,6 @@ class BlogApp {
         localStorage.setItem('blogPageState', JSON.stringify(state));
     }
     
-    // 恢復頁面狀態（簡化版本，只清除舊狀態）
     async restorePageState() {
         const savedState = localStorage.getItem('blogPageState');
         if (!savedState) return false;
@@ -1301,9 +1266,8 @@ class BlogApp {
         try {
             const state = JSON.parse(savedState);
             const now = Date.now();
-            const oneHour = 60 * 60 * 1000; // 1小時
+            const oneHour = 60 * 60 * 1000;
             
-            // 如果狀態太舊，清除它
             if (now - state.timestamp > oneHour) {
                 localStorage.removeItem('blogPageState');
             }
@@ -1315,15 +1279,9 @@ class BlogApp {
     }
 }
 
-// 初始化應用
 const app = new BlogApp();
-window.app = app; // 設置全局引用
+window.app = app;
 
-// 防止重複初始化
-let initCalled = false;
 document.addEventListener('DOMContentLoaded', () => {
-    if (!initCalled) {
-        initCalled = true;
         app.init();
-    }
 });

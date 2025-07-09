@@ -16,33 +16,27 @@ load_dotenv()
 @require_http_methods(["POST"])
 def register(request):
     try:
-        # 解析 JSON 數據
         data = json.loads(request.body)
         username = data.get("username")
         email = data.get("email")
         password = data.get("password")
 
-        # 驗證必填欄位
         if not all([username, email, password]):
             return JsonResponse(
                 {"success": False, "message": f"所有欄位都是必填的。"}, status=400
             )
 
-        # 檢查用戶名是否已存在
         if Account.objects.filter(username=username).exists():
             return JsonResponse(
                 {"success": False, "message": "用戶名已存在"}, status=400
             )
 
-        # 檢查郵箱是否已存在
         if Account.objects.filter(email=email).exists():
             return JsonResponse(
                 {"success": False, "message": "郵箱已被註冊"}, status=400
             )
 
-        # 創建新用戶
         account = Account.objects.create(username=username, email=email)
-        # 使用自定義的密碼加密方法
         account.set_password(password)
         account.save()
 
@@ -67,18 +61,15 @@ def register(request):
 @require_http_methods(["POST"])
 def login(request):
     try:
-        # 解析 JSON 數據
         data = json.loads(request.body)
         email = data.get("email")
         password = data.get("password")
 
-        # 驗證必填欄位
         if not email or not password:
             return JsonResponse(
                 {"success": False, "message": "用戶名和密碼都是必填的"}, status=400
             )
 
-        # 查找用戶
         try:
             account = Account.objects.get(email=email)
         except Account.DoesNotExist:
@@ -86,7 +77,6 @@ def login(request):
                 {"success": False, "message": "用戶名或密碼錯誤"}, status=401
             )
 
-        # 驗證密碼
         if not account.check_password(password):
             return JsonResponse(
                 {"success": False, "message": "用戶名或密碼錯誤"}, status=401
@@ -101,7 +91,6 @@ def login(request):
             "refresh_token",
             refresh_token,
             httponly=True,
-            # secure=settings.DEBUG,
             max_age=60 * 60 * 24 * 7,
         )
         return response
@@ -143,7 +132,7 @@ def refresh_token(request):
         payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])
         account = Account.objects.get(id=payload.get("user_id"))
         access_token, new_refresh_token = generate_token(account)
-        response = JsonResponse({"access_token": access_token})
+        response = JsonResponse({"access_token": access_token, "username": account.username})
         response.set_cookie(
             "refresh_token", new_refresh_token, httponly=True, max_age=60 * 60 * 24 * 7
         )
@@ -156,7 +145,6 @@ def refresh_token(request):
         jwt.DecodeError,
         jwt.InvalidSignatureError,
     ):
-        # 所有 JWT 相關錯誤統一處理
         return JsonResponse({"error": "Invalid or expired token"}, status=401)
 
 
