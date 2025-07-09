@@ -47,7 +47,14 @@ class QuestionViewSet(viewsets.ModelViewSet):
         size = validated_data['size']
         keyword = validated_data['keyword']
         order_by = validated_data['order']
-        order_field = "-created_at" if order_by == "desc" else "created_at"
+        
+        # 處理排序邏輯
+        if order_by == "hot":
+            order_field = "hot"
+        elif order_by == "desc":
+            order_field = "-created_at"
+        else:
+            order_field = "created_at"
 
         questions_page = Question.get_questions(page, size, keyword, order_field)
         serializer = QuestionSerializer(questions_page, many=True, context={'request': request})
@@ -64,10 +71,12 @@ class QuestionViewSet(viewsets.ModelViewSet):
         """創建新問題"""
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
+            tags = request.data.get('tags', '')
             question = Question.create_question(
                 title=serializer.validated_data['title'],
                 content=serializer.validated_data['content'],
-                author=request.account
+                author=request.account,
+                tags=tags
             )
             return Response({
                 "message": "Question created successfully",

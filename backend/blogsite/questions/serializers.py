@@ -10,7 +10,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Question
-        fields = ['id', 'title', 'content', 'created_at', 'author', 'views', 'likes', 'answer_count', 'is_liked']
+        fields = ['id', 'title', 'content', 'tags', 'created_at', 'author', 'views', 'likes', 'answer_count', 'is_liked']
     
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_is_liked(self, obj):
@@ -38,7 +38,7 @@ class QuestionListQuerySerializer(serializers.Serializer):
     page = serializers.IntegerField(default=1, min_value=1)
     size = serializers.IntegerField(default=5, min_value=1, max_value=50)
     keyword = serializers.CharField(required=False, allow_blank=True, default='')
-    order = serializers.ChoiceField(choices=['asc', 'desc'], default='desc')
+    order = serializers.ChoiceField(choices=['asc', 'desc', 'hot'], default='desc')
 
 class AnswerSerializer(serializers.Serializer):
     """用於 Answer 響應的序列化器"""

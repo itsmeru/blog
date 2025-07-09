@@ -143,6 +143,35 @@ class BlogApp {
     
         // 初始化時設置預設分頁，但不觸發載入
         this.initializeDefaultTab(showTab);
+        
+        // 設置Q&A標籤事件
+        this.setupQATabs();
+    }
+
+    // 設置Q&A標籤事件
+    setupQATabs() {
+        const latestTab = document.getElementById('qa-latest-tab');
+        const hotTab = document.getElementById('qa-hot-tab');
+        
+        if (latestTab) {
+            latestTab.addEventListener('click', () => {
+                // 更新標籤狀態
+                latestTab.classList.add('active');
+                hotTab.classList.remove('active');
+                // 載入最新問題
+                this.loadQuestions('desc');
+            });
+        }
+        
+        if (hotTab) {
+            hotTab.addEventListener('click', () => {
+                // 更新標籤狀態
+                hotTab.classList.add('active');
+                latestTab.classList.remove('active');
+                // 載入熱門問題
+                this.loadQuestions('hot');
+            });
+        }
     }
 
     // 新增：初始化預設分頁但不觸發資料載入
@@ -519,12 +548,12 @@ class BlogApp {
     }
 
     // 載入問題
-    async loadQuestions() {
+    async loadQuestions(order = 'desc') {
         const container = document.getElementById('qa-list');
         LoadingManager.show(container);
 
         try {
-            const response = await API.getQuestions();
+            const response = await API.getQuestions({ order: order });
             const questions = response.questions || response; // 支援新舊格式
             this.currentQuestions = questions; // 保存問題資料
             this.renderQuestions(questions);
@@ -585,6 +614,7 @@ class BlogApp {
                 <span>提問者: ${question.author || '匿名'}</span>
                 <span>提問時間: ${question.created_at}</span>
             </div>
+            ${question.tags ? `<div class="question-tags">${question.tags.split(',').map(tag => `<span class="qa-tag">${tag.trim()}</span>`).join('')}</div>` : ''}
             <div class="question-content">
                 <p>${question.content}</p>
             </div>
@@ -1023,6 +1053,7 @@ class BlogApp {
         
         const title = formData.get('title').trim();
         const content = formData.get('content').trim();
+        const tags = formData.get('tags').trim();
         
         // 前端驗證
         if (title.length < 5) {
@@ -1037,7 +1068,8 @@ class BlogApp {
         
         const questionData = {
             title: title,
-            content: content
+            content: content,
+            tags: tags
         };
 
         try {

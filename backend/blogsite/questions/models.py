@@ -7,6 +7,7 @@ from accounts.models import Account
 class Question(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
+    tags = models.CharField(max_length=500, blank=True, null=True)  # 標籤欄位
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     author = models.ForeignKey(Account, on_delete=models.CASCADE)
@@ -26,19 +27,25 @@ class Question(models.Model):
             )
         
         # 排序
-        queryset = queryset.order_by(order_field)
+        if order_field == 'hot':
+            # 熱門排序：按瀏覽數降序，然後按時間降序
+            queryset = queryset.order_by('-views', '-created_at')
+        else:
+            # 最新排序：按時間排序
+            queryset = queryset.order_by(order_field)
         
         # 分頁
         paginator = Paginator(queryset, size)
         return paginator.get_page(page)
     
     @classmethod
-    def create_question(cls, title, content, author):
+    def create_question(cls, title, content, author, tags=None):
         """創建新問題"""
         return cls.objects.create(
             title=title,
             content=content,
-            author=author
+            author=author,
+            tags=tags
         )
     
     def increment_views(self):
@@ -92,6 +99,7 @@ class Question(models.Model):
             "id": self.id,
             "title": self.title,
             "content": self.content,
+            "tags": self.tags,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M"),
             "author": self.author.username if self.author else "匿名",
             "views": self.views,
