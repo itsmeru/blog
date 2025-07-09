@@ -31,6 +31,11 @@ class API {
         try {
             const response = await fetch(url, config);
             
+            // 處理204 No Content響應
+            if (response.status === 204) {
+                return { message: '操作成功' };
+            }
+            
             const data = await response.json();
 
             if (response.status === 401 && AuthManager.getAccessToken() && !this._refreshingToken) {

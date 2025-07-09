@@ -93,9 +93,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
             
             question.delete()
             
-            return Response({
-                "message": "問題刪除成功"
-            }, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
             
         except Question.DoesNotExist:
             return Response({
@@ -106,10 +104,32 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 "message": f"刪除失敗: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @extend_schema(exclude=True)
+    @extend_schema(
+        summary="取得問題詳情",
+        description="根據ID取得特定問題的詳細資訊"
+    )
     def retrieve(self, request, *args, **kwargs):
-        """隱藏此端點"""
-        pass
+        """取得問題詳情"""
+        try:
+            question = self.get_object()
+            # 自動增加瀏覽數
+            question.increment_views()
+            
+            # 檢查用戶是否已登入
+            user = None
+            if hasattr(request, 'account'):
+                user = request.account
+                
+            data = question.get_detail_data(user=user)
+            return Response(data)
+        except Question.DoesNotExist:
+            return Response({
+                "message": "Question not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                "message": f"取得問題詳情失敗: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['get', 'post'])
     def answers(self, request, pk=None):
