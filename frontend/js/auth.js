@@ -33,7 +33,7 @@ class AuthManager {
         this._checkingAuth = true;
         
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/refresh-token/`, {
+            const response = await fetch(`${API_BASE_URL}/accounts/refresh_token/`, {
                 method: 'GET',
                 credentials: 'include',
             });
@@ -62,7 +62,7 @@ class AuthManager {
         this.clearAccessToken();
         
         try {
-        await fetch(`${API_BASE_URL}/auth/logout/`,{
+        await fetch(`${API_BASE_URL}/accounts/logout/`,{
             method: 'POST',
             credentials: 'include',
             });

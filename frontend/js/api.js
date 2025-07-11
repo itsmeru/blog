@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 class API {
     static async request(endpoint, options = {}) {
@@ -82,14 +82,14 @@ class API {
     }
 
     static async register(userData) {
-        return this.request('/auth/register/', {
+        return this.request('/accounts/register/', {
             method: 'POST',
             body: JSON.stringify(userData),
         });
     }
 
     static async login(credentials) {
-        const response = await this.request('/auth/login/', {
+        const response = await this.request('/accounts/login/', {
             method: 'POST',
             body: JSON.stringify(credentials),
         });
@@ -103,7 +103,7 @@ class API {
     }
 
     static async refreshToken() {
-        const response = await this.request('/auth/refresh-token/', {
+        const response = await this.request('/accounts/refresh_token/', {
             method: 'GET',
         });
 
