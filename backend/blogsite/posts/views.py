@@ -13,8 +13,6 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [AllowAny]
-    serializer_class = PostSerializer
-    http_method_names = ['get', 'post', 'delete']
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -33,7 +31,6 @@ class PostViewSet(viewsets.ModelViewSet):
         ]
     )
     def list(self, request):
-        """取得貼文列表"""
         query_serializer = PostListQuerySerializer(data=request.query_params)
         if not query_serializer.is_valid():
             return Response({
@@ -77,7 +74,6 @@ class PostViewSet(viewsets.ModelViewSet):
     
     @login_check
     def destroy(self, request, pk=None):
-        """刪除貼文"""
         try:
             post = self.get_object()
             
@@ -96,12 +92,4 @@ class PostViewSet(viewsets.ModelViewSet):
             return Response({
                 "message": "Post not found"
             }, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({
-                "message": f"刪除失敗: {str(e)}"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @extend_schema(exclude=True)
-    def retrieve(self, request, *args, **kwargs):
-        """隱藏此端點"""
-        pass

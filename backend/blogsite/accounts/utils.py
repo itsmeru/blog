@@ -8,7 +8,6 @@ from rest_framework.response import Response
 from rest_framework import status
 
 def login_check(view_func):
-    """ViewSet 兼容的登入檢查裝飾器"""
     @wraps(view_func)
     def _wrapped_view(self, request, *args, **kwargs):
         auth_header = request.META.get("HTTP_AUTHORIZATION")

@@ -53,7 +53,6 @@ class QuestionListQuerySerializer(serializers.Serializer):
     sort = serializers.ChoiceField(choices=['latest', 'hot'], default='latest')
 
 class AnswerSerializer(serializers.Serializer):
-    """用於 Answer 響應的序列化器"""
     id = serializers.IntegerField()
     content = serializers.CharField()
     created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M')
@@ -62,13 +61,7 @@ class AnswerSerializer(serializers.Serializer):
     is_liked = serializers.BooleanField()
     
     def validate_content(self, value):
-        """驗證內容不為空"""
         if not value or len(value.strip()) == 0:
             raise serializers.ValidationError("回答內容不能為空")
         return value
     
-    def validate_likes(self, value):
-        """驗證按讚數不能為負數"""
-        if value < 0:
-            raise serializers.ValidationError("按讚數不能為負數")
-        return value

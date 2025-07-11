@@ -626,7 +626,7 @@ class BlogApp {
                 const likeIcon = result.is_liked ? '❤️' : '👍';
                 const likeText = result.is_liked ? '收回讚' : '讚';
                 
-                btn.innerHTML = `${likeIcon} ${likeText} (${result.likes})`;
+                btn.innerHTML = `${likeIcon} ${likeText}`;
                 btn.setAttribute('data-is-liked', result.is_liked);
                 btn.className = `btn ${result.is_liked ? 'btn-primary' : 'btn-outline-primary'}`;
                 
@@ -712,7 +712,7 @@ class BlogApp {
                     const likeIcon = result.is_liked ? '❤️' : '👍';
                     const likeText = result.is_liked ? '收回讚' : '讚';
                     
-                    btn.innerHTML = `${likeIcon} ${likeText} (${result.likes})`;
+                    btn.innerHTML = `${likeIcon} ${likeText}`;
                     btn.setAttribute('data-is-liked', result.is_liked);
                     btn.className = `btn ${result.is_liked ? 'btn-primary' : 'btn-outline-primary'} btn-sm like-answer-btn`;
                     
@@ -727,7 +727,6 @@ class BlogApp {
             });
         });
         
-        // 綁定回答刪除事件
         document.querySelectorAll('.delete-answer-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -760,7 +759,6 @@ class BlogApp {
             });
         });
         
-        // 顯示留言板區塊
         document.getElementById('qa-section').style.display = 'none';
         document.getElementById('qa-detail-section').style.display = '';
         
@@ -829,7 +827,7 @@ class BlogApp {
                                 const likeIcon = result.is_liked ? '❤️' : '👍';
                                 const likeText = result.is_liked ? '收回讚' : '讚';
                                 
-                                newAnswerBtn.innerHTML = `${likeIcon} ${likeText} (${result.likes})`;
+                                newAnswerBtn.innerHTML = `${likeIcon} ${likeText}`;
                                 newAnswerBtn.setAttribute('data-is-liked', result.is_liked);
                                 newAnswerBtn.className = `btn ${result.is_liked ? 'btn-primary' : 'btn-outline-primary'} btn-sm like-answer-btn`;
                                 

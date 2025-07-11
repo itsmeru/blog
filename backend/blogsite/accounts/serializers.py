@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from django.contrib.auth.hashers import make_password
 
 from accounts.models import Account
 
@@ -26,7 +25,6 @@ class AccountCreateSerializer(serializers.Serializer):
         return value
     
     def create(self, validated_data):
-        # 創建用戶並加密密碼
         account = Account.objects.create(
             username=validated_data['username'],
             email=validated_data['email']
