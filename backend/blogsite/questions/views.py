@@ -30,7 +30,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
             OpenApiParameter(name='page', type=int, default=1, required=True, description='頁碼'),
             OpenApiParameter(name='size', type=int, default=5, required=True, description='每頁數量'),
             OpenApiParameter(name='keyword', type=str, description='搜尋關鍵字'),
-            OpenApiParameter(name='order_fielde', type=str, default='-created_at', enum=['-created_at', '-hot'], description='排序方式'),
+            OpenApiParameter(name='order_fielde', type=str, default='latest', enum=['hot', 'latest'], description='排序方式'),
         ]
     )
     def list(self, request):
