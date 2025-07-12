@@ -11,10 +11,11 @@ from accounts.serializers import (
     AccountCreateSerializer, 
     AccountSerializer,
     ForgotPasswordSerializer,
-    VerifyResetTokenSerializer,
+    ResetTokenSerializer,
     ResetPasswordSerializer,
-    ChangePasswordSerializer,
-    ChangeUsernameSerializer
+    AccountUpdateSerializer,
+    LoginSerializer,
+    RefreshTokenSerializer
 )
 from accounts.utils import login_check
 
@@ -27,58 +28,39 @@ class AccountViewSet(viewsets.GenericViewSet):
     permission_classes = [AllowAny]
 
     def get_serializer_class(self):
-        if self.action in ['create', 'register']:
-            return AccountCreateSerializer
-        elif self.action == 'forgot_password':
-            return ForgotPasswordSerializer
-        elif self.action == 'verify_reset_token':
-            return VerifyResetTokenSerializer
-        elif self.action == 'reset_password':
-            return ResetPasswordSerializer
-        elif self.action == 'change_password':
-            return ChangePasswordSerializer
-        elif self.action == 'change_username':
-            return ChangeUsernameSerializer
-        return AccountSerializer
+        action_to_serializer = {
+            'register': AccountCreateSerializer,
+            'login': LoginSerializer,
+            'refresh_token': RefreshTokenSerializer,
+            'forgot_password': ForgotPasswordSerializer,
+            'verify_reset_token': ResetTokenSerializer,
+            'reset_password': ResetPasswordSerializer,
+            'change_password': AccountUpdateSerializer,
+            'change_username': AccountUpdateSerializer,
+        }
+        
+        return action_to_serializer.get(self.action, AccountSerializer)
 
     @action(detail=False, methods=['post'])
     def register(self, request):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            account = serializer.save()
-            return Response({
-                "message": "註冊成功",
-                "username": account.username
-            }, status=status.HTTP_201_CREATED)
+        serializer.is_valid(raise_exception=True)
+        
+        account = serializer.save()
         return Response({
-            "message": "註冊失敗",
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+            "message": "註冊成功",
+            "username": account.username
+        }, status=status.HTTP_201_CREATED)
 
 
     @action(detail=False, methods=['post'])
     def login(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
-
-        if not email or not password:
-            return Response({
-                "message": "用戶名和密碼都是必填的"
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            account = Account.objects.get(email=email)
-        except Account.DoesNotExist:
-            return Response({
-                "message": "用戶不存在"
-            }, status=status.HTTP_404_NOT_FOUND)
-
-        if not account.check_password(password):
-            return Response({
-                "message": "用戶名或密碼錯誤"
-            }, status=status.HTTP_401_UNAUTHORIZED)
-
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        account = serializer.validated_data['account']
         access_token, refresh_token = account.generate_tokens()
+        
         response = Response({
             "access_token": access_token,
             "username": account.username
@@ -93,41 +75,20 @@ class AccountViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=['get'])
     def refresh_token(self, request):
-        refresh_token = request.COOKIES.get("refresh_token")
+        serializer = self.get_serializer(data={}, context={'request': request})
+        serializer.is_valid(raise_exception=True)
         
-        if not refresh_token:
-            return Response({
-                "error": "No refresh token"
-            }, status=status.HTTP_401_UNAUTHORIZED)
+        account = serializer.validated_data['account']
+        access_token, new_refresh_token = account.generate_tokens()
         
-        try:
-            payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])            
-            user_id = payload.get("user_id")            
-            account = Account.objects.get(id=user_id)
-            
-            access_token, new_refresh_token = account.generate_tokens()
-            response = Response({
-                "access_token": access_token,
-                "username": account.username
-            })
-            response.set_cookie(
-                "refresh_token", new_refresh_token, httponly=True, max_age=60 * 60 * 24 * 7
-            )
-            return response
-        except Account.DoesNotExist:
-            return Response({
-                "error": "User not found"
-            }, status=status.HTTP_404_NOT_FOUND)
-        except (
-            jwt.ExpiredSignatureError,
-            jwt.InvalidTokenError,
-            jwt.DecodeError,
-            jwt.InvalidSignatureError,
-        ) as e:
-            return Response({
-                "success": False,
-                "error": "Invalid or expired token"
-            }, status=status.HTTP_401_UNAUTHORIZED)
+        response = Response({
+            "access_token": access_token,
+            "username": account.username
+        })
+        response.set_cookie(
+            "refresh_token", new_refresh_token, httponly=True, max_age=60 * 60 * 24 * 7
+        )
+        return response
 
     @action(detail=False, methods=['post'])
     def logout(self, request):
@@ -166,27 +127,23 @@ class AccountViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        new_username = serializer.validated_data['new_username']
+        new_username = serializer.validated_data.get('new_username')
         
-        if Account.objects.filter(username=new_username).exclude(id=request.account.id).exists():
+        if new_username:
+            user = request.account
+            user.username = new_username
+            user.save()
+            
             return Response({
-                "message": "該用戶名已被使用"
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "message": "用戶名更改成功",
+                "username": new_username
+            }, status=status.HTTP_200_OK)
         
-        user = request.account
-        user.username = new_username
-        user.save()
-        
-        return Response({
-            "message": "用戶名更改成功",
-            "username": new_username
-        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     @login_check
     def profile_stats(self, request):
         user = request.account
-        
         posts_count = Post.objects.filter(author=user).count()
         questions_count = Question.objects.filter(author=user).count()
         answers_count = Answer.objects.filter(author=user).count()
@@ -205,25 +162,17 @@ class AccountViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        email = serializer.validated_data['email']
-        account = Account.objects.get(email=email)
-        
-        # 創建重設密碼驗證碼並發送郵件
+        email = serializer.validated_data['email']        
         reset_token = PasswordResetToken.create_token(email)
         
-        if reset_token.send_reset_email():
-            return Response({
-                "message": f"驗證碼已發送到 {email}，請檢查您的郵箱"
-            }, status=status.HTTP_200_OK)
-        else:
-            reset_token.delete()
-            return Response({
-                "message": "郵件發送失敗，請稍後再試"
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        reset_token.send_reset_email()
+        return Response({
+            "message": f"驗證碼已發送到 {email}，請檢查您的郵箱"
+        }, status=status.HTTP_200_OK)
+       
 
     @action(detail=False, methods=['post'])
     def verify_reset_token(self, request):
-        """驗證重設密碼驗證碼"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
@@ -235,7 +184,6 @@ class AccountViewSet(viewsets.GenericViewSet):
     def reset_password(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
         serializer.save()
         
         return Response({

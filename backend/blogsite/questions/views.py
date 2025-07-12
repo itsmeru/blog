@@ -158,8 +158,8 @@ class QuestionViewSet(viewsets.ModelViewSet):
                 data = json.loads(request.body)
                 content = data.get("content")
                 
-                if not content or len(content.strip()) < 5:
-                    return Response({"message": "回答內容至少需要5個字符"}, status=status.HTTP_400_BAD_REQUEST)
+                if not content:
+                    return Response({"message": "回答內容不能為空"}, status=status.HTTP_400_BAD_REQUEST)
                 
                 answer = Answer.create_answer(
                     content=content,

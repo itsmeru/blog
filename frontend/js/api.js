@@ -60,19 +60,22 @@ class API {
                     AuthManager.clearAccessToken();
                 }
                 
-                if (response.status === 400 && data.errors) {
-                    const errorMessages = [];
-                    for (const field in data.errors) {
-                        if (Array.isArray(data.errors[field])) {
-                            errorMessages.push(...data.errors[field]);
-                        } else {
-                            errorMessages.push(data.errors[field]);
+                if (response.status === 400) {
+                    let errorMessage = '';
+                    
+                 if (data.message) {
+                        errorMessage = data.message;
+                    } else {
+                        const errorMessages = [];
+                        for (const field in data) {
+                            errorMessages.push(...data[field]);
                         }
+                        errorMessage = errorMessages.join(', ');
                     }
-                    throw new Error(errorMessages.join(', '));
+                    
+                    throw new Error(errorMessage);
                 }
-                
-                throw new Error(data.message || data.error || '請求失敗');
+                throw new Error(data.message|| '請求失敗');
             }
 
             return data;
@@ -204,6 +207,63 @@ class API {
     static async viewQuestion(questionId) {
         return this.request(`/questions/${questionId}/view/`, {
             method: 'POST',
+        });
+    }
+
+    // 用戶相關 API
+    static async changePassword(oldPassword, newPassword) {
+        return this.request('/accounts/change_password/', {
+            method: 'POST',
+            body: JSON.stringify({
+                old_password: oldPassword,
+                new_password: newPassword
+            }),
+        });
+    }
+
+    static async changeUsername(newUsername) {
+        return this.request('/accounts/change_username/', {
+            method: 'POST',
+            body: JSON.stringify({
+                new_username: newUsername
+            }),
+        });
+    }
+
+    static async getProfileStats() {
+        return this.request('/accounts/profile_stats/', {
+            method: 'GET',
+        });
+    }
+
+    // 忘記密碼相關 API
+    static async forgotPassword(email) {
+        return this.request('/accounts/forgot_password/', {
+            method: 'POST',
+            body: JSON.stringify({
+                email: email
+            }),
+        });
+    }
+
+    static async verifyResetToken(email, token) {
+        return this.request('/accounts/verify_reset_token/', {
+            method: 'POST',
+            body: JSON.stringify({
+                email: email,
+                token: token
+            }),
+        });
+    }
+
+    static async resetPassword(email, token, newPassword) {
+        return this.request('/accounts/reset_password/', {
+            method: 'POST',
+            body: JSON.stringify({
+                email: email,
+                token: token,
+                new_password: newPassword
+            }),
         });
     }
 }

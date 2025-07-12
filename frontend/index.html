@@ -16,7 +16,7 @@
             <div class="nav-menu">
                 <a href="#" id="nav-posts" class="nav-link active">貼文</a>
                 <a href="#" id="nav-qa" class="nav-link">問答</a>
-                <a href="#about" class="nav-link">關於</a>
+                <a href="#" id="nav-about" class="nav-link">關於</a>
             </div>
             <div class="nav-auth">
                 <button id="loginBtn" class="btn btn-outline">登入</button>
@@ -102,6 +102,89 @@
                 </form>
             </div>
         </section>
+
+        <!-- 關於頁面 -->
+        <section id="about-section" class="about-section" style="display:none;">
+            <div class="container">
+                <div class="about-header">
+                    <h2><i class="fas fa-user"></i> 個人資料</h2>
+                </div>
+                
+                <!-- 未登入提示 -->
+                <div id="login-required-message" class="login-required-message" style="display: none;">
+                    <div class="message-box">
+                        <i class="fas fa-lock"></i>
+                        <h3>請先登入</h3>
+                        <p>您需要登入才能查看個人資料和進行帳號管理</p>
+                        <button class="btn btn-primary" onclick="app.showModal('loginModal')">立即登入</button>
+                    </div>
+                </div>
+                
+                <!-- 用戶統計卡片 -->
+                <div id="stats-container" class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-newspaper"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="posts-count">0</h3>
+                            <p>我的發文</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-question-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="questions-count">0</h3>
+                            <p>我的提問</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="answers-count">0</h3>
+                            <p>我的回覆</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 帳號管理區域 -->
+                <div class="account-management">
+                    <div class="management-section">
+                        <h3><i class="fas fa-key"></i> 更改密碼</h3>
+                        <form id="changePasswordForm" class="management-form">
+                            <div class="form-group">
+                                <label for="oldPassword">舊密碼</label>
+                                <input type="password" id="oldPassword" name="oldPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="changeNewPassword">新密碼</label>
+                                <input type="password" id="changeNewPassword" name="changeNewPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="changeConfirmNewPassword">確認新密碼</label>
+                                <input type="password" id="changeConfirmNewPassword" name="changeConfirmNewPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">更改密碼</button>
+                        </form>
+                    </div>
+
+                    <div class="management-section">
+                        <h3><i class="fas fa-user-edit"></i> 更改用戶名</h3>
+                        <form id="changeUsernameForm" class="management-form">
+                            <div class="form-group">
+                                <label for="newUsername">新用戶名</label>
+                                <input type="text" id="newUsername" name="newUsername" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">更改用戶名</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- 登入模態框 -->
@@ -119,7 +202,57 @@
                     <input type="password" id="loginPassword" name="password" required>
                 </div>
                 <button type="submit" class="btn btn-primary btn-full">登入</button>
+                <div class="form-footer">
+                    <a href="#" id="forgotPasswordLink" class="forgot-password-link">忘記密碼？</a>
+                </div>
             </form>
+        </div>
+    </div>
+
+    <!-- 忘記密碼模態框 -->
+    <div id="forgotPasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>忘記密碼</h2>
+            <div id="forgotPasswordSteps">
+                <!-- 步驟1：輸入郵箱 -->
+                <div id="step1" class="forgot-step">
+                    <form id="forgotPasswordForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="forgotEmail">電子郵件</label>
+                            <input type="email" id="forgotEmail" name="email" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">發送驗證碼</button>
+                    </form>
+                </div>
+
+                <!-- 步驟2：輸入驗證碼 -->
+                <div id="step2" class="forgot-step" style="display: none;">
+                    <form id="verifyTokenForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="resetToken">驗證碼</label>
+                            <input type="text" id="resetToken" name="token" maxlength="6" required>
+                            <small>請輸入發送到您郵箱的6位數驗證碼</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">驗證</button>
+                    </form>
+                </div>
+
+                <!-- 步驟3：重設密碼 -->
+                <div id="step3" class="forgot-step" style="display: none;">
+                    <form id="resetPasswordForm" class="auth-form">
+                        <div class="form-group">
+                            <label for="newPassword">新密碼</label>
+                            <input type="password" id="newPassword" name="newPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmNewPassword">確認新密碼</label>
+                            <input type="password" id="confirmNewPassword" name="confirmNewPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-full">重設密碼</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
