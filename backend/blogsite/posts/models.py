@@ -18,10 +18,7 @@ class Post(models.Model):
     
     def get_image_data_url(self):
         if self.image and isinstance(self.image, bytes):
-            try:
                 return f"data:{self.image_type};base64,{base64.b64encode(self.image).decode('utf-8')}"
-            except Exception as e:
-                print(f"圖片編碼錯誤: {e}")
         return None
     
     def to_dict(self):

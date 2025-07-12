@@ -9,12 +9,6 @@ class PostListQuerySerializer(serializers.Serializer):
     size = serializers.IntegerField(min_value=1, max_value=50, default=3)
     keyword = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
     tags = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
-    order = serializers.ChoiceField(
-        choices=['asc', 'desc'], 
-        default='desc',
-        help_text="排序方式：asc(升序) 或 desc(降序)"
-    )
-
 
 class PostSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source='author.username', read_only=True)

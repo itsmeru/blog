@@ -10,7 +10,7 @@ from accounts.serializers import AccountCreateSerializer, AccountSerializer
 
 from .models import Account
 
-class AccountViewSet(viewsets.ViewSet):
+class AccountViewSet(viewsets.GenericViewSet):
     queryset = Account.objects.all()
     permission_classes = [AllowAny]
 
