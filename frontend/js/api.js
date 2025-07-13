@@ -122,7 +122,13 @@ class API {
     // 貼文 API
     static async getPosts(params = {}) {
         const query = new URLSearchParams(params).toString();
-        return this.request(`/posts/?${query}`);
+        const response = await this.request(`/posts/?${query}`);
+        return {
+            results: response.results,
+            count: response.count,
+            next: response.next,
+            previous: response.previous,
+        };
     }
 
     static async createPost(postData) {
@@ -159,7 +165,13 @@ class API {
     // 問答 API
     static async getQuestions(params = {}) {
         const query = new URLSearchParams(params).toString();
-        return this.request(`/questions/?${query}`);
+        const response = await this.request(`/questions/?${query}`);
+        return {
+            results: response.results,
+            count: response.count,
+            next: response.next,
+            previous: response.previous,
+        };
     }
 
     static async createQuestion(questionData) {

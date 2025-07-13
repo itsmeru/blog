@@ -421,11 +421,14 @@ class BlogApp {
                 params.tags = selectedTags.join(',');
             }
             const result = await API.getPosts(params);
-            this.currentPosts = result.posts; // 儲存貼文資料
-            this.renderPosts(result.posts);
-            this.renderPagination(result.current_page, result.num_pages, keyword, selectedTags);
-            
-            // 如果是第一頁，載入所有標籤
+            this.currentPosts = result.results; // 儲存貼文資料
+            this.renderPosts(result.results);
+            // 計算目前頁碼與總頁數
+            const currentPage = page;
+            const total = result.count;
+            const pageSize = params.size || 3;
+            const numPages = Math.ceil(total / pageSize);
+            this.renderPagination(currentPage, numPages, keyword, selectedTags);
             if (page === 1) {
                 await this.loadAllTags();
             }
@@ -613,25 +616,25 @@ class BlogApp {
         LoadingManager.show(container);
 
         try {
-            // 將前端的 order 參數轉換為後端期望的 sort 參數
-            let sort = 'latest'; // 預設最新排序
+            let sort = 'latest';
             if (order === 'hot') {
                 sort = 'hot';
             }
-            
             const response = await API.getQuestions({ 
                 page: page,
-                size: 5, // 每頁顯示 5 個問題
+                size: 5,
                 sort: sort 
             });
-            
-            const questions = response.questions || response; // 支援新舊格式
-            this.currentQuestions = questions; // 保存問題資料
+            const questions = response.results;
+            this.currentQuestions = questions;
             this.renderQuestions(questions);
-            
-            // 渲染分頁
-            if (response.total && response.num_pages > 1) {
-                this.renderQuestionPagination(response.current_page, response.num_pages, sort);
+            // 分頁
+            const currentPage = page;
+            const total = response.count;
+            const pageSize = 5;
+            const numPages = Math.ceil(total / pageSize);
+            if (numPages > 1) {
+                this.renderQuestionPagination(currentPage, numPages, sort);
             } else {
                 document.getElementById('qa-pagination').style.display = 'none';
             }

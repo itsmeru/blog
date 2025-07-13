@@ -4,13 +4,6 @@ from drf_spectacular.types import OpenApiTypes
 from .models import Post
 
 
-class PostListQuerySerializer(serializers.Serializer):
-    page = serializers.IntegerField(min_value=1, default=1)
-    size = serializers.IntegerField(min_value=1, max_value=50, default=3)
-    keyword = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
-    tags = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
-
-
 class PostSerializer(serializers.ModelSerializer):
     author = serializers.CharField(source='author.username', read_only=True)
     created_at = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)

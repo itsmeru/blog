@@ -40,14 +40,4 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
             author=self.context['request'].user,
             tags=validated_data.get('tags', '')
         )
-
-
-class QuestionListQuerySerializer(serializers.Serializer):
-    page = serializers.IntegerField(default=1, min_value=1)
-    size = serializers.IntegerField(default=5, min_value=1, max_value=50)
-    keyword = serializers.CharField(required=False, allow_blank=True, default='')
-    sort = serializers.ChoiceField(choices=['latest', 'hot'], default='latest')
-
-
-
     
