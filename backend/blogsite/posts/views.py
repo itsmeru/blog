@@ -77,7 +77,7 @@ class PostViewSet(viewsets.ModelViewSet):
         try:
             post = self.get_object()
             
-            if post.author != request.account:
+            if post.author != request.user:
                 return Response({
                     "message": "您沒有權限刪除此貼文"
                 }, status=status.HTTP_403_FORBIDDEN)

@@ -420,12 +420,7 @@ body {
     color: #b0b0b0;
 }
 #qa-pagination {
-    text-align: center;
-    margin-top: 1.5rem;
-}
-#qa-pagination button.active {
-    background: #2196f3;
-    color: #fff;
+    margin: 2rem 0;
 }
 .rss-icon {
     font-size: 1.1em;

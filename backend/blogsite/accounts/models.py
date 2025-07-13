@@ -3,24 +3,20 @@ import random
 import string
 import smtplib
 from email.mime.text import MIMEText
-import jwt
-from django.conf import settings
 from datetime import datetime, timedelta
+from django.conf import settings
+
 
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 
 
-class Account(models.Model):
-    username = models.CharField(max_length=100)
-    email = models.EmailField(max_length=100, unique=True)
+class Account(AbstractUser):
     password = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "username"
-    REQUIRED_FIELDS = ["email", "password"]
-
-    def get_username(self):
-        return self.username
+    REQUIRED_FIELDS = ["email"]
 
     def set_password(self, password):
         ph = argon2.PasswordHasher(
@@ -44,24 +40,6 @@ class Account(models.Model):
             return False
 
         return True
-
-    def generate_tokens(self):
-        access_payload = {
-            "user_id": self.id,
-            "username": self.username,
-            "exp": datetime.utcnow() + timedelta(minutes=30),
-        }
-        access_token = jwt.encode(access_payload, settings.SECRET_KEY, algorithm="HS256")
-
-        refresh_payload = {
-            "user_id": self.id,
-            "exp": datetime.utcnow() + timedelta(days=7),
-        }
-        refresh_token = jwt.encode(refresh_payload, settings.SECRET_KEY, algorithm="HS256")
-
-        return access_token, refresh_token
-
-
 
 
 class PasswordResetToken(models.Model):
@@ -103,7 +81,6 @@ class PasswordResetToken(models.Model):
             謝謝！
             部落格團隊'''
         
-        # 使用 smtplib 直接發送
         msg = MIMEText(message)
         msg['Subject'] = subject
         msg['From'] = settings.EMAIL_HOST_USER

@@ -8,6 +8,4 @@ app_name = "accounts"
 router = DefaultRouter()
 router.register(r'', views.AccountViewSet, basename='account')
 
-urlpatterns = [
-    path('', include(router.urls)),
-]
+urlpatterns = router.urls

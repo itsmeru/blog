@@ -1,6 +1,5 @@
-import jwt
 from rest_framework import serializers
-from django.conf import settings
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from accounts.models import Account, PasswordResetToken
 
@@ -23,7 +22,7 @@ class UsernameValidationMixin:
         return value
     
 class PasswordValidationMixin:
-    def validate_password_length(self, value, min_length=6):
+    def validate_password_length(self, value, min_length=8):
         if len(value) < min_length:
             raise serializers.ValidationError(f"密碼至少需要{min_length}個字符")
         return value
@@ -39,7 +38,12 @@ class TokenValidationMixin:
             raise serializers.ValidationError("驗證碼錯誤")
 
 
-class AccountCreateSerializer(serializers.Serializer, EmailValidationMixin, UsernameValidationMixin, PasswordValidationMixin):
+class AccountCreateSerializer(
+    serializers.Serializer,
+        EmailValidationMixin,
+        UsernameValidationMixin,
+        PasswordValidationMixin):
+
     username = serializers.CharField(max_length=100)
     email = serializers.EmailField(max_length=100)
     password = serializers.CharField(max_length=100, write_only=True)
@@ -54,18 +58,16 @@ class AccountCreateSerializer(serializers.Serializer, EmailValidationMixin, User
         return self.validate_password_length(value, 8)
     
     def create(self, validated_data):
-        account = Account.objects.create(
+        account = Account.objects.create_user(
             username=validated_data['username'],
-            email=validated_data['email']
+            email=validated_data['email'],
+            password=validated_data['password']
         )
         account.set_password(validated_data['password'])
+        account.save()
         return account
 
-class AccountSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Account
-        fields = ['id', 'username', 'email']
-        read_only_fields = ['id']
+
 
 class ForgotPasswordSerializer(serializers.Serializer, EmailValidationMixin):
     email = serializers.EmailField()
@@ -73,7 +75,11 @@ class ForgotPasswordSerializer(serializers.Serializer, EmailValidationMixin):
     def validate_email(self, value):
         return self.validate_email_exists(value)
 
-class ResetTokenSerializer(serializers.Serializer, EmailValidationMixin, TokenValidationMixin):
+class ResetTokenSerializer(
+        serializers.Serializer,
+        EmailValidationMixin,
+        TokenValidationMixin):
+    
     email = serializers.EmailField()
     token = serializers.CharField(max_length=6)
 
@@ -81,7 +87,12 @@ class ResetTokenSerializer(serializers.Serializer, EmailValidationMixin, TokenVa
         data['reset_token'] = self.validate_reset_token(data['email'], data['token'])
         return data
 
-class ResetPasswordSerializer(serializers.Serializer, EmailValidationMixin, TokenValidationMixin, PasswordValidationMixin):
+class ResetPasswordSerializer(
+    serializers.Serializer,
+        EmailValidationMixin,
+        TokenValidationMixin,
+        PasswordValidationMixin):
+    
     email = serializers.EmailField()
     token = serializers.CharField(max_length=6)
     new_password = serializers.CharField(min_length=6)
@@ -91,7 +102,7 @@ class ResetPasswordSerializer(serializers.Serializer, EmailValidationMixin, Toke
         return data
 
     def validate_new_password(self, value):
-        return self.validate_password_length(value, 6)
+        return self.validate_password_length(value, 8)
 
     def save(self):
         email = self.validated_data['email']
@@ -106,67 +117,29 @@ class ResetPasswordSerializer(serializers.Serializer, EmailValidationMixin, Toke
         
         return account
 
-class AccountUpdateSerializer(serializers.Serializer, UsernameValidationMixin, PasswordValidationMixin):
-    old_password = serializers.CharField(required=False)
-    new_password = serializers.CharField(min_length=6, required=False)
-    new_username = serializers.CharField(min_length=2, required=False)
-
-    def validate(self, data):
-        if not any([data.get('new_password'), data.get('new_username')]):
-            raise serializers.ValidationError("請提供要更新的欄位")
-        return data
+class ChangePasswordSerializer(serializers.Serializer, PasswordValidationMixin):
+    old_password = serializers.CharField()
+    new_password = serializers.CharField(min_length=6)
 
     def validate_new_password(self, value):
-        if value:
-            return self.validate_password_length(value, 6)
-        return value
+        return self.validate_password_length(value, 8)
+
+class ChangeUsernameSerializer(serializers.Serializer, UsernameValidationMixin):
+    new_username = serializers.CharField(min_length=2)
 
     def validate_new_username(self, value):
-        if value:
-            return self.validate_username_unique(value)
-        return value
+        return self.validate_username_unique(value)
 
-class LoginSerializer(serializers.Serializer, EmailValidationMixin):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        username = attrs.get('username')
+        if '@' in username:
+            try:
+                account = Account.objects.get(email=username)
+                attrs['username'] = account.username
+            except Account.DoesNotExist:
+                raise serializers.ValidationError("用戶不存在")
+        
+        return super().validate(attrs) 
 
-    def validate_email(self, value):
-        return self.validate_email_exists(value)
 
-    def validate(self, data):
-        email = data['email']
-        password = data['password']
-        
-        try:
-            account = Account.objects.get(email=email)
-        except Account.DoesNotExist:
-            raise serializers.ValidationError("用戶不存在")
-        
-        if not account.check_password(password):
-            raise serializers.ValidationError("用戶名或密碼錯誤")
-        
-        data['account'] = account
-        return data
-
-class RefreshTokenSerializer(serializers.Serializer):
-    def validate(self, data):
-        refresh_token = self.context['request'].COOKIES.get("refresh_token")
-        
-        if not refresh_token:
-            raise serializers.ValidationError("No refresh token")
-        
-        try:
-            payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])            
-            user_id = payload.get("user_id")            
-            account = Account.objects.get(id=user_id)
-            data['account'] = account
-            return data
-        except Account.DoesNotExist:
-            raise serializers.ValidationError("User not found")
-        except (
-            jwt.ExpiredSignatureError,
-            jwt.InvalidTokenError,
-            jwt.DecodeError,
-            jwt.InvalidSignatureError,
-        ):
-            raise serializers.ValidationError("Invalid or expired token")

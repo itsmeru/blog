@@ -1,27 +1,82 @@
-import jwt
-
-from django.conf import settings
-
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
 from accounts.serializers import (
     AccountCreateSerializer, 
-    AccountSerializer,
     ForgotPasswordSerializer,
     ResetTokenSerializer,
     ResetPasswordSerializer,
-    AccountUpdateSerializer,
-    LoginSerializer,
-    RefreshTokenSerializer
+    ChangePasswordSerializer,
+    ChangeUsernameSerializer,
+    CustomTokenObtainPairSerializer
 )
 from accounts.utils import login_check
-
 from .models import Account, PasswordResetToken
 from posts.models import Post
-from questions.models import Question, Answer
+from questions.models import Question
+from answers.models import Answer
+
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        
+        if response.status_code == 200:
+            if 'refresh' in response.data:
+                response.set_cookie(
+                    "refresh_token",
+                    response.data['refresh'],
+                    httponly=True,
+                    max_age=60 * 60 * 24 * 7
+                )
+        
+        return response
+
+
+class CustomTokenRefreshView(TokenRefreshView):    
+    def get(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get("refresh_token")
+        
+        if not refresh_token:
+            return Response({
+                "error": "No refresh token provided"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        token = RefreshToken(refresh_token)    
+
+        user_id = token.payload.get('user_id')
+        if user_id:
+            account = Account.objects.get(id=user_id)
+            
+            new_refresh = RefreshToken.for_user(account)
+            new_access_token = str(new_refresh.access_token)
+            new_refresh_token = str(new_refresh)
+            
+            response = Response({
+                "access": new_access_token,
+                "username": account.username
+            })
+            
+            response.set_cookie(
+                "refresh_token", 
+                new_refresh_token, 
+                httponly=True, 
+                max_age=60 * 60 * 24 * 7
+            )
+            
+            return response
+        else:
+            return Response({
+                "error": "Invalid token payload"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+                
 
 class AccountViewSet(viewsets.GenericViewSet):
     queryset = Account.objects.all()
@@ -30,16 +85,14 @@ class AccountViewSet(viewsets.GenericViewSet):
     def get_serializer_class(self):
         action_to_serializer = {
             'register': AccountCreateSerializer,
-            'login': LoginSerializer,
-            'refresh_token': RefreshTokenSerializer,
             'forgot_password': ForgotPasswordSerializer,
             'verify_reset_token': ResetTokenSerializer,
             'reset_password': ResetPasswordSerializer,
-            'change_password': AccountUpdateSerializer,
-            'change_username': AccountUpdateSerializer,
+            'change_password': ChangePasswordSerializer,
+            'change_username': ChangeUsernameSerializer,
         }
         
-        return action_to_serializer.get(self.action, AccountSerializer)
+        return action_to_serializer.get(self.action)
 
     @action(detail=False, methods=['post'])
     def register(self, request):
@@ -52,43 +105,6 @@ class AccountViewSet(viewsets.GenericViewSet):
             "username": account.username
         }, status=status.HTTP_201_CREATED)
 
-
-    @action(detail=False, methods=['post'])
-    def login(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        account = serializer.validated_data['account']
-        access_token, refresh_token = account.generate_tokens()
-        
-        response = Response({
-            "access_token": access_token,
-            "username": account.username
-        })
-        response.set_cookie(
-            "refresh_token",
-            refresh_token,
-            httponly=True,
-            max_age=60 * 60 * 24 * 7
-        )
-        return response
-
-    @action(detail=False, methods=['get'])
-    def refresh_token(self, request):
-        serializer = self.get_serializer(data={}, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        
-        account = serializer.validated_data['account']
-        access_token, new_refresh_token = account.generate_tokens()
-        
-        response = Response({
-            "access_token": access_token,
-            "username": account.username
-        })
-        response.set_cookie(
-            "refresh_token", new_refresh_token, httponly=True, max_age=60 * 60 * 24 * 7
-        )
-        return response
 
     @action(detail=False, methods=['post'])
     def logout(self, request):
@@ -104,7 +120,7 @@ class AccountViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        user = request.account
+        user = request.user
         old_password = serializer.validated_data['old_password']
         new_password = serializer.validated_data['new_password']
         
@@ -115,11 +131,13 @@ class AccountViewSet(viewsets.GenericViewSet):
         
         user.set_password(new_password)
         user.save()
-        
-        return Response({
+        response = Response({
             "message": "密碼更改成功，請重新登入",
             "require_relogin": True
         }, status=status.HTTP_200_OK)
+    
+        response.delete_cookie("refresh_token", path="/")
+        return response
 
     @action(detail=False, methods=['post'])
     @login_check
@@ -130,7 +148,7 @@ class AccountViewSet(viewsets.GenericViewSet):
         new_username = serializer.validated_data.get('new_username')
         
         if new_username:
-            user = request.account
+            user = request.user
             user.username = new_username
             user.save()
             
@@ -143,7 +161,7 @@ class AccountViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['get'])
     @login_check
     def profile_stats(self, request):
-        user = request.account
+        user = request.user
         posts_count = Post.objects.filter(author=user).count()
         questions_count = Question.objects.filter(author=user).count()
         answers_count = Answer.objects.filter(author=user).count()

@@ -64,5 +64,5 @@ class PostCreateSerializer(serializers.ModelSerializer):
             content=validated_data['content'],
             tags=validated_data.get('tags', ''),
             image_file=image_file,
-            author=self.context['request'].account
+            author=self.context['request'].user
         ) 

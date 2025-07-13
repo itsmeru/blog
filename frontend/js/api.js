@@ -92,26 +92,29 @@ class API {
     }
 
     static async login(credentials) {
-        const response = await this.request('/accounts/login/', {
+        const response = await this.request('/token/', {
             method: 'POST',
-            body: JSON.stringify(credentials),
+            body: JSON.stringify({
+                username: credentials.email,  // Simple JWT 使用 username 欄位
+                password: credentials.password
+            }),
         });
 
         // 設置 token 和 username
-        if (response.access_token) {
-            AuthManager.setAccessToken(response.access_token, response.username);
+        if (response.access) {
+            AuthManager.setAccessToken(response.access, credentials.email);
         }
         
         return response;
     }
 
     static async refreshToken() {
-        const response = await this.request('/accounts/refresh_token/', {
+        const response = await this.request('/token/refresh/', {
             method: 'GET',
         });
 
-        if (response.access_token) {
-            AuthManager.setAccessToken(response.access_token, response.username);
+        if (response.access) {
+            AuthManager.setAccessToken(response.access, response.username || AuthManager.getUsername());
         }
         
         return response;
@@ -168,7 +171,7 @@ class API {
     }
 
     static async getQuestionDetail(questionId) {
-        return this.request(`/questions/${questionId}/answers/`);
+        return this.request(`/answers/?question_id=${questionId}`);
     }
 
     static async deleteQuestion(questionId) {
@@ -178,34 +181,35 @@ class API {
     }
 
     static async deleteAnswer(answerId) {
-        return this.request('/questions/delete_answer/', {
-            method: 'POST',
-            body: JSON.stringify({ answer_id: answerId }),
+        return this.request(`/answers/${answerId}/`, {
+            method: 'DELETE',
         });
     }
 
     static async createAnswer(questionId, data) {
-        return this.request(`/questions/${questionId}/answers/`, {
+        return this.request('/answers/', {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify({
+                ...data,
+                question_id: questionId
+            }),
         });
     }
 
     static async likeQuestion(questionId) {
-        return this.request(`/questions/${questionId}/like/`, {
+        return this.request(`/questions/${questionId}/like_question/`, {
             method: 'POST',
         });
     }
 
     static async likeAnswer(answerId) {
-        return this.request('/questions/like_answer/', {
+        return this.request(`/answers/${answerId}/like_answer/`, {
             method: 'POST',
-            body: JSON.stringify({ answer_id: answerId }),
         });
     }
 
     static async viewQuestion(questionId) {
-        return this.request(`/questions/${questionId}/view/`, {
+        return this.request(`/questions/${questionId}/view_question/`, {
             method: 'POST',
         });
     }

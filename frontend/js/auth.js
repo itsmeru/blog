@@ -33,19 +33,23 @@ class AuthManager {
         this._checkingAuth = true;
         
         try {
-            const response = await fetch(`${API_BASE_URL}/accounts/refresh_token/`, {
+            // 使用標準 Simple JWT refresh 端點
+            const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
                 method: 'GET',
                 credentials: 'include',
             });
+            
             if (response.ok) {
                 const data = await response.json();
-                this.setAccessToken(data.access_token, data.username);
+                const username = data.username || this.username || '用戶';
+                this.setAccessToken(data.access, username);
                 return true;
             } else {
                 this.clearAccessToken();
                 return false;
             }
         } catch (error) {
+            console.error('Refresh token error:', error);
             this.clearAccessToken();
             return false;
         } finally {
