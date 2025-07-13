@@ -51,7 +51,7 @@ class CustomTokenRefreshView(TokenRefreshView):
         
         if not refresh_token:
             return Response({
-                "error": "No refresh token provided"
+                "error": "未提供 refresh token"
             }, status=status.HTTP_401_UNAUTHORIZED)
         
         token = RefreshToken(refresh_token)    
@@ -79,7 +79,7 @@ class CustomTokenRefreshView(TokenRefreshView):
             return response
         else:
             return Response({
-                "error": "Invalid token payload"
+                "error": "Token 資料無效"
             }, status=status.HTTP_401_UNAUTHORIZED)
                 
 
@@ -120,7 +120,7 @@ class AccountViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['post'])
     def logout(self, request):
         response = Response({
-            "message": "Logout successfully"
+            "message": "登出成功"
         })
         response.delete_cookie("refresh_token", path="/")
         return response

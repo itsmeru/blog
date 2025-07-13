@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import action
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+
 
 from questions.models import Question
 from questions.serializers import (
@@ -25,19 +25,11 @@ class QuestionViewSet(viewsets.ModelViewSet):
             return QuestionCreateSerializer
         return QuestionSerializer
 
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(name='page', type=int, default=1, required=True, description='頁碼'),
-            OpenApiParameter(name='size', type=int, default=5, required=True, description='每頁數量'),
-            OpenApiParameter(name='keyword', type=str, description='搜尋關鍵字'),
-            OpenApiParameter(name='order_fielde', type=str, default='latest', enum=['hot', 'latest'], description='排序方式'),
-        ]
-    )
     def list(self, request):
         query_serializer = QuestionListQuerySerializer(data=request.query_params)
         if not query_serializer.is_valid():
             return Response({
-                "message": "Invalid query parameters",
+                "message": "查詢參數錯誤",
                 "errors": query_serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
         

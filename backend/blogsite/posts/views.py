@@ -2,7 +2,6 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 from posts.models import Post
 from .serializers import PostSerializer, PostCreateSerializer, PostListQuerySerializer
 
@@ -15,20 +14,17 @@ class PostViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAuthenticated()]
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return PostCreateSerializer
+        return PostSerializer
 
-    @extend_schema(
-        parameters=[
-            OpenApiParameter(name='page', type=int, default=1, required=True, description='頁碼'),
-            OpenApiParameter(name='size', type=int, default=3, required=True, description='每頁數量'),
-            OpenApiParameter(name='keyword', type=str, description='搜尋關鍵字'),
-            OpenApiParameter(name='tags', type=str, description='標籤篩選（逗號分隔）'),
-        ]
-    )
     def list(self, request):
         query_serializer = PostListQuerySerializer(data=request.query_params)
         if not query_serializer.is_valid():
             return Response({
-                "message": "Invalid query parameters",
+                "message": "查詢參數錯誤",
                 "errors": query_serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
         
@@ -50,18 +46,18 @@ class PostViewSet(viewsets.ModelViewSet):
         })
 
     def create(self, request):
-        serializer = PostCreateSerializer(data=request.data, context={'request': request})
+        serializer = self.get_serializer(data=request.data, context={'request': request})
 
         if serializer.is_valid():
             post = serializer.save()
         
             return Response({
-                "message": "Post created successfully",
+                "message": "貼文建立成功",
                 "post_id": post.id
             }, status=status.HTTP_201_CREATED)
         else:
             return Response({
-                "message": "Validation error",
+                "message": "驗證錯誤",
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
     
@@ -82,6 +78,6 @@ class PostViewSet(viewsets.ModelViewSet):
             
         except Post.DoesNotExist:
             return Response({
-                "message": "Post not found"
+                "message": "貼文不存在"
             }, status=status.HTTP_404_NOT_FOUND)
     
