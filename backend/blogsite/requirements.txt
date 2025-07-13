@@ -1,12 +1,16 @@
+argon2-cffi==25.1.0
+argon2-cffi-bindings==21.2.0
 asgiref==3.9.0
 attrs==25.3.0
 black==25.1.0
+certifi==2025.7.9
 cffi==1.17.1
 click==8.2.1
 cryptography==45.0.5
 Django==5.2.4
 django-cors-headers==4.7.0
 djangorestframework==3.16.0
+djangorestframework_simplejwt==5.5.0
 dotenv==0.9.9
 drf-spectacular==0.28.0
 inflection==0.5.1
@@ -20,7 +24,7 @@ pathspec==0.12.1
 pillow==11.3.0
 platformdirs==4.3.8
 pycparser==2.22
-PyJWT==2.10.1
+PyJWT==2.9.0
 python-dotenv==1.1.1
 PyYAML==6.0.2
 referencing==0.36.2

@@ -1,156 +1,217 @@
-import json
-from datetime import datetime, timedelta
-import os
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
+from rest_framework.exceptions import AuthenticationFailed
 
-import jwt
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from dotenv import load_dotenv
-from django.conf import settings
-
-from .models import Account
-
-load_dotenv()
-@csrf_exempt
-@require_http_methods(["POST"])
-def register(request):
-    try:
-        data = json.loads(request.body)
-        username = data.get("username")
-        email = data.get("email")
-        password = data.get("password")
-
-        if not all([username, email, password]):
-            return JsonResponse(
-                {"success": False, "message": f"所有欄位都是必填的。"}, status=400
-            )
-
-        if Account.objects.filter(username=username).exists():
-            return JsonResponse(
-                {"success": False, "message": "用戶名已存在"}, status=400
-            )
-
-        if Account.objects.filter(email=email).exists():
-            return JsonResponse(
-                {"success": False, "message": "郵箱已被註冊"}, status=400
-            )
-
-        account = Account.objects.create(username=username, email=email)
-        account.set_password(password)
-        account.save()
-
-        return JsonResponse(
-            {
-                "success": True,
-                "message": "註冊成功",
-            }
-        )
-
-    except json.JSONDecodeError as e:
-        return JsonResponse(
-            {"success": False, "message": f"無效的 JSON 格式: {str(e)}"}, status=400
-        )
-    except Exception as e:
-        return JsonResponse(
-            {"success": False, "message": f"註冊失敗: {str(e)}"}, status=500
-        )
+from accounts.serializers import (
+    AccountCreateSerializer, 
+    ForgotPasswordSerializer,
+    ResetTokenSerializer,
+    ResetPasswordSerializer,
+    ChangePasswordSerializer,
+    ChangeUsernameSerializer,
+    CustomTokenObtainPairSerializer
+)
+from .models import Account, PasswordResetToken
+from posts.models import Post
+from questions.models import Question
+from answers.models import Answer
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def login(request):
-    try:
-        data = json.loads(request.body)
-        email = data.get("email")
-        password = data.get("password")
 
-        if not email or not password:
-            return JsonResponse(
-                {"success": False, "message": "用戶名和密碼都是必填的"}, status=400
-            )
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
+    def post(self, request, *args, **kwargs):
         try:
-            account = Account.objects.get(email=email)
-        except Account.DoesNotExist:
-            return JsonResponse(
-                {"success": False, "message": "用戶名或密碼錯誤"}, status=401
-            )
+            response = super().post(request, *args, **kwargs)
+            
+            if response.status_code == 200:
+                if 'refresh' in response.data:
+                    response.set_cookie(
+                        "refresh_token",
+                        response.data['refresh'],
+                        httponly=True,
+                        max_age=60 * 60 * 24 * 7
+                    )
+            return response
+    
+        except AuthenticationFailed:
+            return Response({
+                "message": "帳號或密碼錯誤"
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not account.check_password(password):
-            return JsonResponse(
-                {"success": False, "message": "用戶名或密碼錯誤"}, status=401
-            )
 
-        access_token, refresh_token = generate_token(account)
-        response = JsonResponse({
-            "access_token": access_token,
+class CustomTokenRefreshView(TokenRefreshView):    
+    def get(self, request, *args, **kwargs):
+        refresh_token = request.COOKIES.get("refresh_token")
+        
+        if not refresh_token:
+            return Response({
+                "error": "未提供 refresh token"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        token = RefreshToken(refresh_token)    
+
+        user_id = token.payload.get('user_id')
+        if user_id:
+            account = Account.objects.get(id=user_id)
+            
+            new_refresh = RefreshToken.for_user(account)
+            new_access_token = str(new_refresh.access_token)
+            new_refresh_token = str(new_refresh)
+            
+            response = Response({
+                "access": new_access_token,
+                "username": account.username
+            })
+            
+            response.set_cookie(
+                "refresh_token", 
+                new_refresh_token, 
+                httponly=True, 
+                max_age=60 * 60 * 24 * 7
+            )
+            
+            return response
+        else:
+            return Response({
+                "error": "Token 資料無效"
+            }, status=status.HTTP_401_UNAUTHORIZED)
+                
+
+class AccountViewSet(viewsets.GenericViewSet):
+    queryset = Account.objects.all()
+    def get_permissions(self):
+        if self.action in [
+            'register', 'forgot_password',
+            'verify_reset_token', 'reset_password',
+            'logout']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_serializer_class(self):
+        action_to_serializer = {
+            'register': AccountCreateSerializer,
+            'forgot_password': ForgotPasswordSerializer,
+            'verify_reset_token': ResetTokenSerializer,
+            'reset_password': ResetPasswordSerializer,
+            'change_password': ChangePasswordSerializer,
+            'change_username': ChangeUsernameSerializer,
+        }
+        
+        return action_to_serializer.get(self.action)
+
+    @action(detail=False, methods=['post'])
+    def register(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        account = serializer.save()
+        return Response({
+            "message": "註冊成功",
             "username": account.username
+        }, status=status.HTTP_201_CREATED)
+
+
+    @action(detail=False, methods=['post'])
+    def logout(self, request):
+        response = Response({
+            "message": "登出成功"
         })
-        response.set_cookie(
-            "refresh_token",
-            refresh_token,
-            httponly=True,
-            max_age=60 * 60 * 24 * 7,
-        )
+        response.delete_cookie("refresh_token", path="/")
         return response
 
-    except json.JSONDecodeError:
-        return JsonResponse(
-            {"success": False, "message": "無效的 JSON 格式"}, status=400
-        )
-    except Exception as e:
-        return JsonResponse(
-            {"success": False, "message": f"登入失敗: {str(e)}"}, status=500
-        )
-
-
-def generate_token(account):
-    access_payload = {
-        "user_id": account.id,
-        "username": account.username,
-        "exp": datetime.utcnow() + timedelta(minutes=30),
-    }
-    access_token = jwt.encode(access_payload, settings.SECRET_KEY, algorithm="HS256")
-
-    refresh_payload = {
-        "user_id": account.id,
-        "exp": datetime.utcnow() + timedelta(days=7),
-    }
-    refresh_token = jwt.encode(refresh_payload, settings.SECRET_KEY, algorithm="HS256")
-
-    return access_token, refresh_token
-
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def refresh_token(request):
-    refresh_token = request.COOKIES.get("refresh_token")
-    if not refresh_token:
-        return JsonResponse({"error": "No refresh token"}, status=401)
-    try:
-        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=["HS256"])
-        account = Account.objects.get(id=payload.get("user_id"))
-        access_token, new_refresh_token = generate_token(account)
-        response = JsonResponse({"access_token": access_token, "username": account.username})
-        response.set_cookie(
-            "refresh_token", new_refresh_token, httponly=True, max_age=60 * 60 * 24 * 7
-        )
+    @action(detail=False, methods=['post'])
+    def change_password(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = request.user
+        old_password = serializer.validated_data['old_password']
+        new_password = serializer.validated_data['new_password']
+        
+        if not user.check_password(old_password):
+            return Response({
+                "message": "舊密碼錯誤"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(new_password)
+        user.save()
+        response = Response({
+            "message": "密碼更改成功，請重新登入",
+            "require_relogin": True
+        }, status=status.HTTP_200_OK)
+    
+        response.delete_cookie("refresh_token", path="/")
         return response
-    except Account.DoesNotExist:
-        return JsonResponse({"error": "User not found"}, status=401)
-    except (
-        jwt.ExpiredSignatureError,
-        jwt.InvalidTokenError,
-        jwt.DecodeError,
-        jwt.InvalidSignatureError,
-    ):
-        return JsonResponse({"error": "Invalid or expired token"}, status=401)
+
+    @action(detail=False, methods=['post'])
+    def change_username(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        new_username = serializer.validated_data.get('new_username')
+        
+        if new_username:
+            user = request.user
+            user.username = new_username
+            user.save()
+            
+            return Response({
+                "message": "用戶名更改成功",
+                "username": new_username
+            }, status=status.HTTP_200_OK)
+        
+
+    @action(detail=False, methods=['get'])
+    def profile_stats(self, request):
+        user = request.user
+        posts_count = Post.objects.filter(author=user).count()
+        questions_count = Question.objects.filter(author=user).count()
+        answers_count = Answer.objects.filter(author=user).count()
+        
+        return Response({
+            "posts_count": posts_count,
+            "questions_count": questions_count,
+            "answers_count": answers_count,
+            "total_content": posts_count + questions_count + answers_count
+        }, status=status.HTTP_200_OK)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def logout(request):
-    response = JsonResponse({"message": "Logout successfully"})
-    response.delete_cookie("refresh_token", path="/")
-    return response
+
+    @action(detail=False, methods=['post'])
+    def forgot_password(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        email = serializer.validated_data['email']        
+        reset_token = PasswordResetToken.create_token(email)
+        
+        reset_token.send_reset_email()
+        return Response({
+            "message": f"驗證碼已發送到 {email}，請檢查您的郵箱"
+        }, status=status.HTTP_200_OK)
+       
+
+    @action(detail=False, methods=['post'])
+    def verify_reset_token(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        return Response({
+            "message": "驗證碼正確",
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def reset_password(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
+        return Response({
+            "message": "密碼重設成功，請使用新密碼登入"
+        }, status=status.HTTP_200_OK)
