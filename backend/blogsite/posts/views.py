@@ -22,7 +22,6 @@ class PostViewSet(viewsets.ModelViewSet):
             OpenApiParameter(name='size', type=int, default=3, required=True, description='每頁數量'),
             OpenApiParameter(name='keyword', type=str, description='搜尋關鍵字'),
             OpenApiParameter(name='tags', type=str, description='標籤篩選（逗號分隔）'),
-            OpenApiParameter(name='order', type=str, default='desc', enum=['asc', 'desc'], description='排序方式'),
         ]
     )
     def list(self, request):
