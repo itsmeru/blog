@@ -17,8 +17,6 @@ class PostViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     @extend_schema(
-        summary="取得貼文列表",
-        description="取得分頁的貼文列表，支援搜尋和標籤篩選",
         parameters=[
             OpenApiParameter(name='page', type=int, default=1, required=True, description='頁碼'),
             OpenApiParameter(name='size', type=int, default=3, required=True, description='每頁數量'),

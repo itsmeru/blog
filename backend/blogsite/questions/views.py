@@ -26,8 +26,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return QuestionSerializer
 
     @extend_schema(
-        summary="取得問題列表",
-        description="取得分頁的問題列表，支援搜尋",
         parameters=[
             OpenApiParameter(name='page', type=int, default=1, required=True, description='頁碼'),
             OpenApiParameter(name='size', type=int, default=5, required=True, description='每頁數量'),
