@@ -95,12 +95,11 @@ class API {
         const response = await this.request('/token/', {
             method: 'POST',
             body: JSON.stringify({
-                username: credentials.email,  // Simple JWT 使用 username 欄位
+                username: credentials.email,
                 password: credentials.password
             }),
         });
 
-        // 設置 token 和 username
         if (response.access) {
             AuthManager.setAccessToken(response.access, credentials.email);
         }

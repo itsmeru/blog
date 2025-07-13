@@ -33,7 +33,6 @@ class AuthManager {
         this._checkingAuth = true;
         
         try {
-            // 使用標準 Simple JWT refresh 端點
             const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
                 method: 'GET',
                 credentials: 'include',

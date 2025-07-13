@@ -60,15 +60,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
         })
 
     def create(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         
-        question = Question.create_question(
-            title=serializer.validated_data['title'],
-            content=serializer.validated_data['content'],
-            author=request.user,
-            tags=serializer.validated_data.get('tags', '')
-        )
+        question = serializer.save()
         
         return Response({
             "message": "問題發布成功",

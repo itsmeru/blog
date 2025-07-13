@@ -32,6 +32,14 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
         if not value or len(value.strip()) < 1:
             raise serializers.ValidationError("內容不能為空")
         return value.strip()
+    
+    def create(self, validated_data):
+        return Question.create_question(
+            title=validated_data['title'],
+            content=validated_data['content'],
+            author=self.context['request'].user,
+            tags=validated_data.get('tags', '')
+        )
 
 
 class QuestionListQuerySerializer(serializers.Serializer):

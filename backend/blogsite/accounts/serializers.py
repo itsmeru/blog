@@ -138,8 +138,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 account = Account.objects.get(email=username)
                 attrs['username'] = account.username
             except Account.DoesNotExist:
-                raise serializers.ValidationError("用戶不存在")
+                raise serializers.ValidationError("帳號不存在")
         
-        return super().validate(attrs) 
-
-
+        return super().validate(attrs)
+            

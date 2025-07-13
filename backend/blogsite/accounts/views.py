@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
+from rest_framework.exceptions import AuthenticationFailed
 
 from accounts.serializers import (
     AccountCreateSerializer, 
@@ -25,18 +26,23 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        
-        if response.status_code == 200:
-            if 'refresh' in response.data:
-                response.set_cookie(
-                    "refresh_token",
-                    response.data['refresh'],
-                    httponly=True,
-                    max_age=60 * 60 * 24 * 7
-                )
-        
-        return response
+        try:
+            response = super().post(request, *args, **kwargs)
+            
+            if response.status_code == 200:
+                if 'refresh' in response.data:
+                    response.set_cookie(
+                        "refresh_token",
+                        response.data['refresh'],
+                        httponly=True,
+                        max_age=60 * 60 * 24 * 7
+                    )
+            return response
+    
+        except AuthenticationFailed:
+            return Response({
+                "message": "帳號或密碼錯誤"
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class CustomTokenRefreshView(TokenRefreshView):    
@@ -80,7 +86,10 @@ class CustomTokenRefreshView(TokenRefreshView):
 class AccountViewSet(viewsets.GenericViewSet):
     queryset = Account.objects.all()
     def get_permissions(self):
-        if self.action in ['register']:
+        if self.action in [
+            'register', 'forgot_password',
+            'verify_reset_token', 'reset_password',
+            'logout']:
             return [AllowAny()]
         return [IsAuthenticated()]
 
