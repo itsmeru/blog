@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
 
@@ -14,7 +14,6 @@ from accounts.serializers import (
     ChangeUsernameSerializer,
     CustomTokenObtainPairSerializer
 )
-from accounts.utils import login_check
 from .models import Account, PasswordResetToken
 from posts.models import Post
 from questions.models import Question
@@ -80,7 +79,10 @@ class CustomTokenRefreshView(TokenRefreshView):
 
 class AccountViewSet(viewsets.GenericViewSet):
     queryset = Account.objects.all()
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        if self.action in ['register']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
     def get_serializer_class(self):
         action_to_serializer = {
@@ -115,7 +117,6 @@ class AccountViewSet(viewsets.GenericViewSet):
         return response
 
     @action(detail=False, methods=['post'])
-    @login_check
     def change_password(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -140,7 +141,6 @@ class AccountViewSet(viewsets.GenericViewSet):
         return response
 
     @action(detail=False, methods=['post'])
-    @login_check
     def change_username(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -159,7 +159,6 @@ class AccountViewSet(viewsets.GenericViewSet):
         
 
     @action(detail=False, methods=['get'])
-    @login_check
     def profile_stats(self, request):
         user = request.user
         posts_count = Post.objects.filter(author=user).count()

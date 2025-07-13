@@ -10,18 +10,7 @@ class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
     likes = models.IntegerField(default=0)
     
-    @classmethod
-    def create_answer(cls, content, author, question):
-        answer = cls.objects.create(
-            content=content,
-            author=author,
-            question=question
-        )
-        
-        question.answer_count = question.answers.count()
-        question.save()
-        
-        return answer
+
     
     def toggle_like(self, user):
         like_record, created = AnswerLike.objects.get_or_create(
@@ -34,7 +23,6 @@ class Answer(models.Model):
             self.save()
             return True
         else:
-            # 收回讚
             like_record.delete()
             self.likes = max(0, self.likes - 1)
             self.save()

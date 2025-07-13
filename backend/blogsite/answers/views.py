@@ -54,35 +54,18 @@ class AnswerViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_404_NOT_FOUND)
 
     def create(self, request):
-        question_id = request.data.get('question_id')
-        if not question_id:
-            return Response({
-                "message": "請提供問題ID"
-            }, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
         
-        try:
-            question = Question.objects.get(id=question_id)
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            
-            answer = Answer.create_answer(
-                content=serializer.validated_data['content'],
-                author=request.user,
-                question=question
-            )
-            
-            answer_serializer = AnswerSerializer(answer, context={'request': request})
-            return Response({
-                "message": "留言發布成功",
-                **answer_serializer.data
-            }, status=status.HTTP_201_CREATED)
-        except Question.DoesNotExist:
-            return Response({
-                "message": "問題不存在"
-            }, status=status.HTTP_404_NOT_FOUND)
+        answer = serializer.save()
+        answer_serializer = AnswerSerializer(answer, context={'request': request})
+        
+        return Response({
+            "message": "留言發布成功",
+            **answer_serializer.data
+        }, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, pk=None):
-        """刪除回答"""
         try:
             answer = self.get_object()
             if answer.author != request.user:

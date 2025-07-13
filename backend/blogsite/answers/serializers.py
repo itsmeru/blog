@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from questions.models import Question
+
 from answers.models import Answer, AnswerLike
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -19,11 +21,35 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 
 class AnswerCreateSerializer(serializers.ModelSerializer):
+    question_id = serializers.IntegerField(write_only=True)
+    
     class Meta:
         model = Answer
-        fields = ['content']
+        fields = ['content', 'question_id']
     
     def validate_content(self, value):
         if not value or len(value.strip()) < 1:
             raise serializers.ValidationError("內容不能為空")
-        return value.strip() 
+        return value.strip()
+    
+    def validate_question_id(self, value):
+        try:
+            Question.objects.get(id=value)
+        except Question.DoesNotExist:
+            raise serializers.ValidationError("問題不存在")
+        return value
+    
+    def create(self, validated_data):
+        question_id = validated_data.pop('question_id')
+        question = Question.objects.get(id=question_id)
+        
+        answer = Answer.objects.create(
+            content=validated_data['content'],
+            author=self.context['request'].user,
+            question=question
+        )
+        
+        question.answer_count = question.answers.count()
+        question.save()
+        
+        return answer 

@@ -15,6 +15,9 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     author = models.ForeignKey(Account, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['-created_at']
     
     def get_image_data_url(self):
         if self.image and isinstance(self.image, bytes):
@@ -50,7 +53,7 @@ class Post(models.Model):
         )
     
     @classmethod
-    def get_posts(cls, page, size, keyword, order_by, tags=""):
+    def get_posts(cls, page, size, keyword, tags=""):
         posts = cls.objects.all()
         
         if keyword:
@@ -66,22 +69,7 @@ class Post(models.Model):
                     tag_queries |= Q(tags__icontains=tag)
                 posts = posts.filter(tag_queries)
         
-        posts = posts.order_by(order_by)
         paginator = Paginator(posts, size)
         posts_page = paginator.get_page(page)
         return posts_page
     
-    @classmethod
-    def get_posts_with_data(cls, page, size, keyword, order_by, tags=""):
-        posts_page = cls.get_posts(page, size, keyword, order_by, tags)
-        
-        posts_data = []
-        for post in posts_page:
-            posts_data.append(post.to_dict())
-        
-        return {
-            "posts": posts_data,
-            "total": posts_page.paginator.count,
-            "num_pages": posts_page.paginator.num_pages,
-            "current_page": posts_page.number,
-        }

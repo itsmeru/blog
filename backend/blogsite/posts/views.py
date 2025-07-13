@@ -1,10 +1,8 @@
-
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from accounts.utils import login_check
 from posts.models import Post
 from .serializers import PostSerializer, PostCreateSerializer, PostListQuerySerializer
 
@@ -12,12 +10,11 @@ from .serializers import PostSerializer, PostCreateSerializer, PostListQuerySeri
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [AllowAny]
     
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return PostCreateSerializer
-        return PostSerializer
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
     @extend_schema(
         summary="取得貼文列表",
@@ -43,10 +40,8 @@ class PostViewSet(viewsets.ModelViewSet):
         size = validated_data['size']
         keyword = validated_data['keyword']
         tags = validated_data['tags']
-        order_by = validated_data['order']
-        order_field = "-created_at" if order_by == "desc" else "created_at"
 
-        posts_page = Post.get_posts(page, size, keyword, order_field, tags)
+        posts_page = Post.get_posts(page, size, keyword, tags)
         
         serializer = PostSerializer(posts_page, many=True)
         
@@ -57,11 +52,12 @@ class PostViewSet(viewsets.ModelViewSet):
             "current_page": posts_page.number,
         })
 
-    @login_check
     def create(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = PostCreateSerializer(data=request.data, context={'request': request})
+
         if serializer.is_valid():
             post = serializer.save()
+        
             return Response({
                 "message": "Post created successfully",
                 "post_id": post.id
@@ -72,7 +68,6 @@ class PostViewSet(viewsets.ModelViewSet):
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
     
-    @login_check
     def destroy(self, request, pk=None):
         try:
             post = self.get_object()
