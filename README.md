@@ -10,7 +10,7 @@
 
 ### 後端技術棧
 - **Django 5.2.4** + **Django REST Framework 3.16.0**
-- **Simple JWT 5.5.0** 認證（access token + refresh token）
+- **Simple JWT 5.5.0**
 - **drf-spectacular 0.28.0** 自動化 API 文件
 - **SQLite** 資料庫（開發環境）
 
