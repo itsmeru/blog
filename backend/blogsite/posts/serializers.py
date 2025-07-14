@@ -52,7 +52,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
         return Post.create_post_with_image(
             title=validated_data['title'],
             content=validated_data['content'],
+            author=self.context['request'].user,
             tags=validated_data.get('tags', ''),
-            image_file=image_file,
-            author=self.context['request'].user
+            image_file=image_file
         ) 
