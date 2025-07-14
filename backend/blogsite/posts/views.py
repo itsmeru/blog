@@ -3,12 +3,20 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from posts.models import Post
-from .serializers import PostSerializer, PostCreateSerializer, PostListQuerySerializer
+from .serializers import PostSerializer, PostCreateSerializer
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
+
+class PostPagination(PageNumberPagination):
+    page_size = 3
+    page_size_query_param = 'size'
+    max_page_size = 50
 
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()
     parser_classes = (MultiPartParser, FormParser)
+    pagination_class = PostPagination
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
@@ -20,30 +28,28 @@ class PostViewSet(viewsets.ModelViewSet):
             return PostCreateSerializer
         return PostSerializer
 
-    def list(self, request):
-        query_serializer = PostListQuerySerializer(data=request.query_params)
-        if not query_serializer.is_valid():
-            return Response({
-                "message": "查詢參數錯誤",
-                "errors": query_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        validated_data = query_serializer.validated_data
-        page = validated_data['page']
-        size = validated_data['size']
-        keyword = validated_data['keyword']
-        tags = validated_data['tags']
+    def get_queryset(self):
+        queryset = Post.objects.all()
+        keyword = self.request.query_params.get('keyword', '').strip()
+        tags = self.request.query_params.get('tags', '').strip()
+        if keyword:
+            queryset = queryset.filter(
+                Q(title__icontains=keyword) | Q(content__icontains=keyword)
+            )
+        if tags:
+            tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
+            for tag in tag_list:
+                queryset = queryset.filter(tags__icontains=tag)
+        return queryset
 
-        posts_page = Post.get_posts(page, size, keyword, tags)
-        
-        serializer = PostSerializer(posts_page, many=True)
-        
-        return Response({
-            "posts": serializer.data,
-            "total": posts_page.paginator.count,
-            "num_pages": posts_page.paginator.num_pages,
-            "current_page": posts_page.number,
-        })
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='keyword', type=str, description='Keyword search (fuzzy match in title or content)'),
+            OpenApiParameter(name='tags', type=str, description='Tag search (comma separated)'),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def create(self, request):
         serializer = self.get_serializer(data=request.data, context={'request': request})

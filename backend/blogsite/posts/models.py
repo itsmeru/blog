@@ -36,7 +36,7 @@ class Post(models.Model):
         }
     
     @classmethod
-    def create_post_with_image(cls, title, content, tags="", image_file=None, author=None):
+    def create_post_with_image(cls, title, content, author, tags="", image_file=None):
         image_data = None
         image_type = None
         if image_file:

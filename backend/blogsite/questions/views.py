@@ -2,18 +2,39 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 
 from questions.models import Question
 from questions.serializers import (
     QuestionSerializer,
     QuestionCreateSerializer,
-    QuestionListQuerySerializer,
 )
 
 
+class QuestionPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'size'
+    max_page_size = 50
+
 class QuestionViewSet(viewsets.ModelViewSet):
-    queryset = Question.objects.all()
+    def get_queryset(self):
+        queryset = Question.objects.all()
+        keyword = self.request.query_params.get('keyword', '').strip()
+        sort = self.request.query_params.get('sort', 'latest')
+        if keyword:
+            queryset = queryset.filter(
+                Q(title__icontains=keyword) | Q(content__icontains=keyword)
+            )
+        if sort == 'hot':
+            queryset = queryset.order_by('-views', '-likes')
+        else:
+            queryset = queryset.order_by('-created_at')
+        return queryset
+
+    pagination_class = QuestionPagination
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'view_question']:
@@ -25,29 +46,14 @@ class QuestionViewSet(viewsets.ModelViewSet):
             return QuestionCreateSerializer
         return QuestionSerializer
 
-    def list(self, request):
-        query_serializer = QuestionListQuerySerializer(data=request.query_params)
-        if not query_serializer.is_valid():
-            return Response({
-                "message": "查詢參數錯誤",
-                "errors": query_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        validated_data = query_serializer.validated_data
-        page = validated_data['page']
-        size = validated_data['size']
-        keyword = validated_data['keyword']
-        sort = validated_data['sort']
-
-        questions_page = Question.get_questions(page, size, keyword, sort)
-        serializer = QuestionSerializer(questions_page, many=True, context={'request': request})
-        
-        return Response({
-            "questions": serializer.data,
-            "total": questions_page.paginator.count,
-            "num_pages": questions_page.paginator.num_pages,
-            "current_page": questions_page.number,
-        })
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='keyword', type=str, description='Keyword search (fuzzy match in title or content)'),
+            OpenApiParameter(name='sort', type=str, enum=['hot', 'latest'], description='Sort by (hot: most popular, latest: newest, default)'),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def create(self, request):
         serializer = self.get_serializer(data=request.data, context={'request': request})
