@@ -15,22 +15,27 @@ class EmailValidationMixin:
             raise serializers.ValidationError("此信箱已被使用")
         return value
 
+
 class UsernameValidationMixin:
     def validate_username_unique(self, value):
         if Account.objects.filter(username=value).exists():
             raise serializers.ValidationError("該用戶名已被使用")
         return value
     
+
 class PasswordValidationMixin:
     def validate_password_length(self, value, min_length=8):
         if len(value) < min_length:
             raise serializers.ValidationError(f"密碼至少需要{min_length}個字符")
         return value
 
+
 class TokenValidationMixin:
     def validate_reset_token(self, email, token):
         try:
-            reset_token = PasswordResetToken.objects.get(email=email, token=token)
+            reset_token = PasswordResetToken.objects.get(
+                email=email, token=token
+                )
             if not reset_token.is_valid():
                 raise serializers.ValidationError("驗證碼已過期或已使用")
             return reset_token
@@ -68,12 +73,12 @@ class AccountCreateSerializer(
         return account
 
 
-
 class ForgotPasswordSerializer(serializers.Serializer, EmailValidationMixin):
     email = serializers.EmailField()
 
     def validate_email(self, value):
         return self.validate_email_exists(value)
+
 
 class ResetTokenSerializer(
         serializers.Serializer,
@@ -84,8 +89,11 @@ class ResetTokenSerializer(
     token = serializers.CharField(max_length=6)
 
     def validate(self, data):
-        data['reset_token'] = self.validate_reset_token(data['email'], data['token'])
+        data['reset_token'] = self.validate_reset_token(
+            data['email'], data['token']
+            )
         return data
+
 
 class ResetPasswordSerializer(
     serializers.Serializer,
@@ -98,7 +106,9 @@ class ResetPasswordSerializer(
     new_password = serializers.CharField(min_length=6)
 
     def validate(self, data):
-        data['reset_token'] = self.validate_reset_token(data['email'], data['token'])
+        data['reset_token'] = self.validate_reset_token(
+            data['email'], data['token']
+            )
         return data
 
     def validate_new_password(self, value):
@@ -117,18 +127,27 @@ class ResetPasswordSerializer(
         
         return account
 
-class ChangePasswordSerializer(serializers.Serializer, PasswordValidationMixin):
+
+class ChangePasswordSerializer(
+    serializers.Serializer,
+    PasswordValidationMixin
+):
     old_password = serializers.CharField()
     new_password = serializers.CharField(min_length=6)
 
     def validate_new_password(self, value):
         return self.validate_password_length(value, 8)
 
-class ChangeUsernameSerializer(serializers.Serializer, UsernameValidationMixin):
+
+class ChangeUsernameSerializer(
+    serializers.Serializer,
+    UsernameValidationMixin
+):
     new_username = serializers.CharField(min_length=2)
 
     def validate_new_username(self, value):
         return self.validate_username_unique(value)
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -141,4 +160,3 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 raise serializers.ValidationError("帳號不存在")
         
         return super().validate(attrs)
-            

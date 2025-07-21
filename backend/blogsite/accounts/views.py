@@ -3,7 +3,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenRefreshView, TokenObtainPairView
+from rest_framework_simplejwt.views import (
+    TokenRefreshView,
+    TokenObtainPairView
+)
 from rest_framework.exceptions import AuthenticationFailed
 
 from accounts.serializers import (
@@ -21,14 +24,12 @@ from questions.models import Question
 from answers.models import Answer
 
 
-
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
         try:
-            response = super().post(request, *args, **kwargs)
-            
+            response = super().post(request, *args, **kwargs) 
             if response.status_code == 200:
                 if 'refresh' in response.data:
                     response.set_cookie(
@@ -38,7 +39,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                         max_age=60 * 60 * 24 * 7
                     )
             return response
-    
         except AuthenticationFailed:
             return Response({
                 "message": "帳號或密碼錯誤"
@@ -48,48 +48,44 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 class CustomTokenRefreshView(TokenRefreshView):    
     def get(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get("refresh_token")
-        
         if not refresh_token:
             return Response({
                 "error": "未提供 refresh token"
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
+            }, status=status.HTTP_401_UNAUTHORIZED)  
         token = RefreshToken(refresh_token)    
 
         user_id = token.payload.get('user_id')
         if user_id:
-            account = Account.objects.get(id=user_id)
-            
+            account = Account.objects.get(id=user_id)      
             new_refresh = RefreshToken.for_user(account)
             new_access_token = str(new_refresh.access_token)
-            new_refresh_token = str(new_refresh)
-            
+            new_refresh_token = str(new_refresh)       
             response = Response({
                 "access": new_access_token,
                 "username": account.username
-            })
-            
+            })      
             response.set_cookie(
-                "refresh_token", 
-                new_refresh_token, 
-                httponly=True, 
+                "refresh_token",
+                new_refresh_token,
+                httponly=True,
                 max_age=60 * 60 * 24 * 7
-            )
-            
+            )   
             return response
         else:
             return Response({
                 "error": "Token 資料無效"
-            }, status=status.HTTP_401_UNAUTHORIZED)
-                
+            }, status=status.HTTP_401_UNAUTHORIZED)      
+
 
 class AccountViewSet(viewsets.GenericViewSet):
     queryset = Account.objects.all()
+
     def get_permissions(self):
         if self.action in [
             'register', 'forgot_password',
             'verify_reset_token', 'reset_password',
-            'logout']:
+            'logout', 'profile_stats'
+        ]:
             return [AllowAny()]
         return [IsAuthenticated()]
 
@@ -101,8 +97,7 @@ class AccountViewSet(viewsets.GenericViewSet):
             'reset_password': ResetPasswordSerializer,
             'change_password': ChangePasswordSerializer,
             'change_username': ChangeUsernameSerializer,
-        }
-        
+        }  
         return action_to_serializer.get(self.action)
 
     @action(detail=False, methods=['post'])
@@ -116,7 +111,6 @@ class AccountViewSet(viewsets.GenericViewSet):
             "username": account.username
         }, status=status.HTTP_201_CREATED)
 
-
     @action(detail=False, methods=['post'])
     def logout(self, request):
         response = Response({
@@ -128,12 +122,10 @@ class AccountViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['post'])
     def change_password(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
+        serializer.is_valid(raise_exception=True)    
         user = request.user
         old_password = serializer.validated_data['old_password']
         new_password = serializer.validated_data['new_password']
-        
         if not user.check_password(old_password):
             return Response({
                 "message": "舊密碼錯誤"
@@ -152,20 +144,16 @@ class AccountViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['post'])
     def change_username(self, request):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        new_username = serializer.validated_data.get('new_username')
-        
+        serializer.is_valid(raise_exception=True) 
+        new_username = serializer.validated_data.get('new_username')  
         if new_username:
             user = request.user
             user.username = new_username
-            user.save()
-            
+            user.save()    
             return Response({
                 "message": "用戶名更改成功",
                 "username": new_username
             }, status=status.HTTP_200_OK)
-        
 
     @action(detail=False, methods=['get'])
     def profile_stats(self, request):
@@ -181,8 +169,6 @@ class AccountViewSet(viewsets.GenericViewSet):
             "total_content": posts_count + questions_count + answers_count
         }, status=status.HTTP_200_OK)
 
-
-
     @action(detail=False, methods=['post'])
     def forgot_password(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -195,7 +181,6 @@ class AccountViewSet(viewsets.GenericViewSet):
         return Response({
             "message": f"驗證碼已發送到 {email}，請檢查您的郵箱"
         }, status=status.HTTP_200_OK)
-       
 
     @action(detail=False, methods=['post'])
     def verify_reset_token(self, request):

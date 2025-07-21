@@ -6,4 +6,4 @@ app_name = 'answers'
 router = DefaultRouter()
 router.register(r'', views.AnswerViewSet, basename='answer')
 
-urlpatterns = router.urls 
+urlpatterns = router.urls
