@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.exceptions import AuthenticationFailed
+from drf_spectacular.utils import extend_schema
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from apps.accounts.serializers import (
     AccountCreateSerializer,
@@ -13,7 +15,6 @@ from apps.accounts.serializers import (
     ResetPasswordSerializer,
     ChangePasswordSerializer,
     ChangeUsernameSerializer,
-    CustomTokenObtainPairSerializer
 )
 from .models import Account, PasswordResetToken
 from apps.posts.models import Post
@@ -21,8 +22,8 @@ from apps.questions.models import Question
 from apps.answers.models import Answer
 
 
+@extend_schema(tags=["Accounts"])   
 class CustomTokenObtainPairView(TokenObtainPairView):
-    serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
         try:
@@ -41,6 +42,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             }, status=status.HTTP_401_UNAUTHORIZED)
 
 
+@extend_schema(tags=["Accounts"])
 class CustomTokenRefreshView(TokenRefreshView):
     def get(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get("refresh_token")
@@ -72,12 +74,18 @@ class CustomTokenRefreshView(TokenRefreshView):
             }, status=status.HTTP_401_UNAUTHORIZED)
 
 
+@extend_schema(
+    tags=["Accounts"],
+    request=AccountCreateSerializer,
+    responses=AccountCreateSerializer,
+    description="註冊新帳號"
+)
 class RegisterView(GenericAPIView):
-    serializer_class = AccountCreateSerializer
     permission_classes = [AllowAny]
+    parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = AccountCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         account = serializer.save()
         return Response({
@@ -85,7 +93,7 @@ class RegisterView(GenericAPIView):
             "username": account.username
         }, status=status.HTTP_201_CREATED)
 
-
+@extend_schema(tags=["Accounts"])
 class LogoutView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -96,13 +104,13 @@ class LogoutView(GenericAPIView):
         response.delete_cookie("refresh_token", path="/")
         return response
 
-
+@extend_schema(tags=["Accounts"])
 class ChangePasswordView(GenericAPIView):
-    serializer_class = ChangePasswordSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = (FormParser,)
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = ChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = request.user
         old_password = serializer.validated_data['old_password']
@@ -120,13 +128,13 @@ class ChangePasswordView(GenericAPIView):
         response.delete_cookie("refresh_token", path="/")
         return response
 
-
+@extend_schema(tags=["Accounts"])
 class ChangeUsernameView(GenericAPIView):
-    serializer_class = ChangeUsernameSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = (FormParser,)
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = ChangeUsernameSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         new_username = serializer.validated_data.get('new_username')
         if new_username:
@@ -138,7 +146,7 @@ class ChangeUsernameView(GenericAPIView):
                 "username": new_username
             }, status=status.HTTP_200_OK)
 
-
+@extend_schema(tags=["Accounts"])
 class ProfileStatsView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -154,13 +162,13 @@ class ProfileStatsView(GenericAPIView):
             "total_content": posts_count + questions_count + answers_count
         }, status=status.HTTP_200_OK)
 
-
+@extend_schema(tags=["Accounts"])
 class ForgotPasswordView(GenericAPIView):
-    serializer_class = ForgotPasswordSerializer
     permission_classes = [AllowAny]
+    parser_classes = (FormParser,)
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = ForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
         reset_token = PasswordResetToken.create_token(email)
@@ -169,25 +177,23 @@ class ForgotPasswordView(GenericAPIView):
             "message": f"驗證碼已發送到 {email}，請檢查您的郵箱"
         }, status=status.HTTP_200_OK)
 
-
+@extend_schema(tags=["Accounts"])
 class VerifyResetTokenView(GenericAPIView):
-    serializer_class = ResetTokenSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = ResetTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response({
             "message": "驗證碼正確",
         }, status=status.HTTP_200_OK)
 
-
+@extend_schema(tags=["Accounts"])       
 class ResetPasswordView(GenericAPIView):
-    serializer_class = ResetPasswordSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = ResetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({

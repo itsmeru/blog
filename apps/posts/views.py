@@ -10,8 +10,14 @@ from apps.posts.serializers import PostSerializer, PostCreateSerializer
 
 
 
-class PostListCreateView(GenericAPIView):
-    parser_classes = (MultiPartParser, FormParser)
+@extend_schema(
+    tags=["Posts"],
+    request=PostCreateSerializer,
+    responses=PostSerializer,
+    description="建立貼文"
+)
+class PostListView(GenericAPIView):
+    parser_classes = (FormParser,)
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
@@ -37,8 +43,14 @@ class PostListCreateView(GenericAPIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    tags=["Posts"],
+    request=PostCreateSerializer,
+    responses=PostSerializer,
+    description="查詢/更新/刪除單一貼文"
+)
 class PostDetailView(GenericAPIView):
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (FormParser,)
 
     def get_permissions(self):
         if self.request.method == 'GET':

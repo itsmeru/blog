@@ -3,7 +3,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.parsers import FormParser
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from apps.questions.models import Question
 from apps.answers.models import Answer
@@ -13,15 +13,16 @@ from apps.answers.serializers import (
 )
 
 
+@extend_schema(
+    tags=["Answers"],
+    request=AnswerCreateSerializer,
+    responses=AnswerSerializer,
+    description="建立回答"
+)
 class AnswerCreateView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (FormParser,)
-
-    @extend_schema(
-        request=AnswerCreateSerializer,
-        responses=AnswerSerializer,
-        description="建立回答"
-    )
+    
     def post(self, request):
         serializer = AnswerCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
@@ -33,8 +34,15 @@ class AnswerCreateView(GenericAPIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    tags=["Answers"],
+    request=AnswerCreateSerializer,
+    responses=AnswerSerializer,
+    description="取得所有回答"
+)
 class AnswerListView(GenericAPIView):
     permission_classes = [AllowAny]
+    parser_classes = (FormParser,)
 
     def get(self, request, question_id=None):
         try:
@@ -59,6 +67,12 @@ class AnswerListView(GenericAPIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
 
+@extend_schema(
+    tags=["Answers"],
+    request=AnswerCreateSerializer,
+    responses=AnswerSerializer,
+    description="查詢/更新/刪除單一回答"
+)
 class AnswerDetailView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (FormParser,)
@@ -98,6 +112,7 @@ class AnswerDetailView(GenericAPIView):
             return Response({"message": "回答不存在"}, status=status.HTTP_404_NOT_FOUND)
 
 
+@extend_schema(tags=["Answers"])
 class AnswerLikeView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 

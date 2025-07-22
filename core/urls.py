@@ -2,6 +2,9 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
+from core import settings
+
+API_VERSION = settings.API_VERSION
 
 api_patterns = [
     path("accounts/", include("apps.accounts.urls")),
@@ -14,7 +17,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # API URLs
-    path("api/", include(api_patterns)),
+    path(f"api/{API_VERSION}/", include(api_patterns)),
     
     # Documentation
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

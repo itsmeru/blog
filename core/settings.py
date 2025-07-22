@@ -28,6 +28,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+API_VERSION = "v1"
+
 STATICFILES_DIRS = [
        os.path.join(BASE_DIR, 'static'),
    ]

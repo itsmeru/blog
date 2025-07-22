@@ -146,14 +146,14 @@ class ChangeUsernameSerializer(
         return self.validate_username_unique(value)
 
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        username = attrs.get('username')
-        if '@' in username:
-            try:
-                account = Account.objects.get(email=username)
-                attrs['username'] = account.username
-            except Account.DoesNotExist:
-                raise serializers.ValidationError("帳號不存在")
+# class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+#     def validate(self, attrs):
+#         username = attrs.get('username')
+#         if '@' in username:
+#             try:
+#                 account = Account.objects.get(email=username)
+#                 attrs['username'] = account.username
+#             except Account.DoesNotExist:
+#                 raise serializers.ValidationError("帳號不存在")
         
-        return super().validate(attrs)
+#         return super().validate(attrs)

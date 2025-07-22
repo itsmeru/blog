@@ -1,9 +1,9 @@
 from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
-from rest_framework.parsers import FormParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema
 
 from apps.questions.models import Question
 from apps.questions.serializers import (
@@ -12,7 +12,15 @@ from apps.questions.serializers import (
 )
 
 
-class QuestionListCreateView(GenericAPIView):
+@extend_schema(
+    tags=["Questions"],
+    request=QuestionCreateSerializer,
+    responses=QuestionSerializer,
+    description="建立問題"
+)
+class QuestionListView(GenericAPIView):
+    parser_classes = (MultiPartParser, FormParser)
+
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
@@ -23,11 +31,6 @@ class QuestionListCreateView(GenericAPIView):
         serializer = QuestionSerializer(questions, many=True, context={'request': request})
         return Response(serializer.data)
     
-    @extend_schema(
-        request=QuestionCreateSerializer,
-        responses=QuestionSerializer,
-        description="建立問題"
-    )
     def post(self, request):
         serializer = QuestionCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
@@ -37,8 +40,14 @@ class QuestionListCreateView(GenericAPIView):
             "question_id": question.id
         }, status=status.HTTP_201_CREATED)
 
+@extend_schema(
+    tags=["Questions"],
+    request=QuestionCreateSerializer,
+    responses=QuestionSerializer,
+    description="查詢/更新/刪除單一問題"
+)
 class QuestionDetailView(GenericAPIView):
-    parser_classes = (FormParser,)
+    parser_classes = (MultiPartParser, FormParser)
 
     def get_permissions(self):
         if self.request.method == 'GET':
