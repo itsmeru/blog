@@ -80,10 +80,7 @@ class ForgotPasswordSerializer(serializers.Serializer, EmailValidationMixin):
         return self.validate_email_exists(value)
 
 
-class ResetTokenSerializer(
-        serializers.Serializer,
-        EmailValidationMixin,
-        TokenValidationMixin):
+class ResetTokenSerializer(serializers.Serializer, TokenValidationMixin):
     
     email = serializers.EmailField()
     token = serializers.CharField(max_length=6)
@@ -97,9 +94,9 @@ class ResetTokenSerializer(
 
 class ResetPasswordSerializer(
     serializers.Serializer,
-        EmailValidationMixin,
         TokenValidationMixin,
-        PasswordValidationMixin):
+        PasswordValidationMixin
+    ):
     
     email = serializers.EmailField()
     token = serializers.CharField(max_length=6)

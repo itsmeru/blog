@@ -1,7 +1,8 @@
-from rest_framework import viewsets, status
+from rest_framework import status
+from drf_spectacular.utils import extend_schema
+from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import action
 
 from questions.models import Question
 from answers.models import Answer
@@ -11,31 +12,33 @@ from answers.serializers import (
 )
 
 
-class AnswerViewSet(viewsets.ModelViewSet):
-    queryset = Answer.objects.all()
-    
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [AllowAny()]
-        return [IsAuthenticated()]
+class AnswerCreateView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
 
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return AnswerCreateSerializer
-        return AnswerSerializer
+    @extend_schema(
+        request=AnswerCreateSerializer,
+        responses=AnswerSerializer,
+        description="建立回答"
+    )
+    def post(self, request):
+        serializer = AnswerCreateSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        answer = serializer.save()
+        answer_serializer = AnswerSerializer(answer, context={'request': request})
+        return Response({
+            "message": "留言發布成功",
+            **answer_serializer.data
+        }, status=status.HTTP_201_CREATED)
 
-    def list(self, request):
-        question_id = request.query_params.get('question_id')
-        if not question_id:
-            return Response({
-                "message": "請提供問題ID"
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
+
+class AnswerListView(GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, question_id=None):
         try:
             question = Question.objects.get(id=question_id)
             answers = Answer.objects.filter(question=question).order_by('-created_at')
             serializer = AnswerSerializer(answers, many=True, context={'request': request})
-            
             return Response({
                 "answers": serializer.data,
                 "question": {
@@ -53,26 +56,17 @@ class AnswerViewSet(viewsets.ModelViewSet):
                 "message": "問題不存在"
             }, status=status.HTTP_404_NOT_FOUND)
 
-    def create(self, request):
-        serializer = self.get_serializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        
-        answer = serializer.save()
-        answer_serializer = AnswerSerializer(answer, context={'request': request})
-        
-        return Response({
-            "message": "留言發布成功",
-            **answer_serializer.data
-        }, status=status.HTTP_201_CREATED)
 
-    def destroy(self, request, pk=None):
+class AnswerDeleteView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, answer_id=None):
         try:
-            answer = self.get_object()
+            answer = Answer.objects.get(id=answer_id)
             if answer.author != request.user:
                 return Response({
                     "message": "您沒有權限刪除此回答"
                 }, status=status.HTTP_403_FORBIDDEN)
-            
             answer.delete()
             return Response({
                 "message": "回答刪除成功"
@@ -82,10 +76,13 @@ class AnswerViewSet(viewsets.ModelViewSet):
                 "message": "回答不存在"
             }, status=status.HTTP_404_NOT_FOUND)
 
-    @action(detail=True, methods=['post'])
-    def like_answer(self, request, pk=None):
+
+class AnswerLikeView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk=None):
         try:
-            answer = self.get_object()
+            answer = Answer.objects.get(id=pk)
             is_liked = answer.toggle_like(request.user)
             return Response({
                 "message": "操作成功",
