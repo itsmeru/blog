@@ -4,12 +4,14 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 
 
 class QuestionService:
-    @staticmethod
-    def create_question(data, user):
+    repository_class = QuestionRepository
+
+    @classmethod
+    def create_question(cls, data, user):
         serializer = QuestionCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        question = QuestionRepository.create_question(
+        question = cls.repository_class.create_question(
             title=serializer.validated_data["title"],
             content=serializer.validated_data["content"],
             author=user,
@@ -17,56 +19,56 @@ class QuestionService:
         )
         return question
 
-    @staticmethod
-    def list_questions(page=1, size=10, keyword=None, tags=None):
-        questions = QuestionRepository.get_questions_with_filters(
+    @classmethod
+    def list_questions(cls, page=1, size=10, keyword=None, tags=None):
+        questions = cls.repository_class.get_questions_with_filters(
             page, size, keyword, tags or ""
         )
         return questions
 
-    @staticmethod
-    def get_question(question_id):
-        question = QuestionRepository.get_by_id(question_id)
+    @classmethod
+    def get_question(cls, question_id):
+        question = cls.repository_class.get_by_id(question_id)
         if not question:
             raise NotFound("問題不存在")
         return question
 
-    @staticmethod
-    def update_question(question_id, user, data, partial=False):
-        question = QuestionRepository.get_by_id(question_id)
+    @classmethod
+    def update_question(cls, question_id, user, data, partial=False):
+        question = cls.repository_class.get_by_id(question_id)
         if not question:
             raise NotFound("問題不存在")
         if question.author != user:
             raise PermissionDenied("您沒有權限修改此問題")
 
-        question = QuestionRepository.update_question(question, data, partial=partial)
+        question = cls.repository_class.update_question(question, data, partial=partial)
         return question
 
-    @staticmethod
-    def delete_question(question_id, user):
-        question = QuestionRepository.get_by_id(question_id)
+    @classmethod
+    def delete_question(cls, question_id, user):
+        question = cls.repository_class.get_by_id(question_id)
         if not question:
             raise NotFound("問題不存在")
         if question.author != user:
             raise PermissionDenied("您沒有權限刪除此問題")
 
-        QuestionRepository.delete_question(question)
+        cls.repository_class.delete_question(question)
         return True
 
-    @staticmethod
-    def toggle_like(question_id, user):
-        question = QuestionRepository.get_by_id(question_id)
+    @classmethod
+    def toggle_like(cls, question_id, user):
+        question = cls.repository_class.get_by_id(question_id)
         if not question:
             raise NotFound("問題不存在")
 
-        is_liked = QuestionRepository.toggle_like(question, user)
+        is_liked = cls.repository_class.toggle_like(question, user)
         return question, is_liked
 
-    @staticmethod
-    def increment_views(question_id):
-        question = QuestionRepository.get_by_id(question_id)
+    @classmethod
+    def increment_views(cls, question_id):
+        question = cls.repository_class.get_by_id(question_id)
         if not question:
             raise NotFound("問題不存在")
 
-        QuestionRepository.increment_views(question)
+        cls.repository_class.increment_views(question)
         return question

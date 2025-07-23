@@ -46,21 +46,21 @@ class User(AbstractBaseUser, PermissionsMixin, DepartmentChoicesMixin):
     updated_at = models.DateTimeField(auto_now=True)
     enabled_permissions = models.JSONField(_("啟用的權限"), default=list, blank=True)
     disabled_permissions = models.JSONField(_("停用的權限"), default=list, blank=True)
-    roles = models.ManyToManyField("rbac.Role", related_name="users", blank=True)
+    # roles = models.ManyToManyField("rbac.Role", related_name="users", blank=True)
     department = models.CharField(
         max_length=50,
         null=True,
         blank=True,
         choices=DepartmentChoicesMixin.DEPARTMENT_CHOICES,
     )
-    permissions = models.ManyToManyField(
-        "rbac.Permission", related_name="users", blank=True
-    )
+    # permissions = models.ManyToManyField(
+    #     "rbac.Permission", related_name="users", blank=True
+    # )
 
-    USERNAME_FIELD = "email"  # 必須
-    REQUIRED_FIELDS = []  # 必須
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
 
-    objects = UserManager()  # 必須
+    objects = UserManager()
 
     def __str__(self):
         return self.nickname or self.email or str(self.id)

@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     "apps.posts",
     "apps.questions",
     "apps.answers",
-    "apps.rbac",
+    # "apps.rbac",
 ]
 
 MIDDLEWARE = [

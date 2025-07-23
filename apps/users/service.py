@@ -12,18 +12,20 @@ from .repository import UserRepository
 
 
 class UserService:
-    @staticmethod
-    def register_user(email, phone, nickname, password):
-        if UserRepository.get_by_email(email):
+    repository_class = UserRepository
+
+    @classmethod
+    def register_user(cls, email, phone, nickname, password):
+        if cls.repository_class.get_by_email(email):
             raise ValidationError({"email": ["Email already exists"]})
 
-        return UserRepository.create_user(
+        return cls.repository_class.create_user(
             email=email, phone=phone, nickname=nickname, password=password
         )
 
-    @staticmethod
-    def authenticate(account, password):
-        user = UserRepository.get_by_account(account)
+    @classmethod
+    def authenticate(cls, account, password):
+        user = cls.repository_class.get_by_account(account)
         if not user:
             raise AuthenticationFailed("Invalid credentials")
 
@@ -35,8 +37,8 @@ class UserService:
 
         return user
 
-    @staticmethod
-    def refresh_token(refresh_token):
+    @classmethod
+    def refresh_token(cls, refresh_token):
         try:
             refresh = RefreshToken(refresh_token)
             access_token = refresh.access_token
@@ -47,13 +49,13 @@ class UserService:
         except (InvalidToken, TokenError):
             raise ValidationError("Invalid refresh token")
 
-    @staticmethod
-    def update_password(user, new_password):
-        return UserRepository.update_password(user, new_password)
+    @classmethod
+    def update_password(cls, user, new_password):
+        return cls.repository_class.update_password(user, new_password)
 
-    @staticmethod
-    def forgot_password(email):
-        user = UserRepository.get_by_email(email)
+    @classmethod
+    def forgot_password(cls, email):
+        user = cls.repository_class.get_by_email(email)
         if not user:
             raise NotFound("User not found")
 
@@ -87,9 +89,9 @@ class UserService:
 
         return {"email": email, "expires_at": datetime.now() + timedelta(hours=1)}
 
-    @staticmethod
-    def reset_password(email, verification_code, new_password):
-        user = UserRepository.get_by_email(email)
+    @classmethod
+    def reset_password(cls, email, verification_code, new_password):
+        user = cls.repository_class.get_by_email(email)
         if not user:
             raise NotFound("User not found")
 

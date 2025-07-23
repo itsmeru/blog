@@ -1,12 +1,10 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
-from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.parsers import FormParser, JSONParser
-from rest_framework.exceptions import ValidationError
 
 from core.app.base.serializer import BaseErrorSerializer
 
@@ -24,7 +22,6 @@ from .serializers import (
     ResetPasswordSerializer,
 )
 from .service import UserService
-from apps.users.models import User
 
 
 class RegisterView(GenericAPIView):
@@ -168,7 +165,7 @@ class ChangePasswordView(GenericAPIView):
 
 class ForgotPasswordView(GenericAPIView):
     permission_classes = [AllowAny]
-    parser_classes = (FormParser,JSONParser)
+    parser_classes = (FormParser, JSONParser)
 
     @extend_schema(
         request=ForgotPasswordSerializer,
