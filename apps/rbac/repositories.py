@@ -4,6 +4,7 @@ from django.db import transaction
 
 from .models import Permission, Role, RolePermission
 
+
 class PermissionRepository:
     model_class = Permission
 
@@ -35,6 +36,7 @@ class PermissionRepository:
         return cls.model_class.objects.filter(id__in=permission_ids).update(
             is_active=is_active
         )
+
 
 class RoleRepository:
     model_class = Role
@@ -71,6 +73,7 @@ class RoleRepository:
             role.permissions.set(permissions)
         return role
 
+
 class RolePermissionRepository:
     model_class = RolePermission
 
@@ -87,6 +90,7 @@ class RolePermissionRepository:
             for permission in permissions
         ]
         return cls.model_class.objects.bulk_create(role_permissions)
+
 
 class UserPermissionRepository:
     model_class = get_user_model()
@@ -115,6 +119,7 @@ class UserPermissionRepository:
         result = any(p.api_url == api_url and p.method == method for p in permissions)
         return result
 
+
 class UserRepository:
     model_class = get_user_model()
 
@@ -124,6 +129,4 @@ class UserRepository:
 
     @classmethod
     def get_users_by_role(cls, role):
-        return (
-            cls.model_class.objects.filter(roles=role, is_active=True).order_by("nickname")
-        )
+        return cls.model_class.objects.filter(roles=role, is_active=True)

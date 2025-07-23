@@ -45,7 +45,7 @@ class QuestionCreateListView(GenericAPIView):
                 description="每頁筆數",
                 default=10,
             ),
-        ]
+        ],
     )
     def get(self, request):
         queryset = QuestionService.list_questions()
@@ -124,7 +124,6 @@ class QuestionDetailView(GenericAPIView):
                 "data": QuestionSerializer(question).data,
             }
         )
-
 
     @extend_schema(
         responses={

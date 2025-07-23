@@ -1,4 +1,7 @@
-from .repositories import RoleRepository, UserRepository
+from rest_framework.exceptions import NotFound, ValidationError
+from apps.users.models import User
+from apps.rbac.repositories import RoleRepository, UserRepository
+
 
 class RoleService:
     repository_class = RoleRepository
@@ -38,4 +41,20 @@ class RoleService:
 
     @classmethod
     def list_all_role_users(cls):
-        return UserRepository.get_active_users() 
+        return UserRepository.get_active_users()
+
+    @staticmethod
+    def set_role_users(role_id, user_ids):
+        try:
+            role = RoleRepository.get_by_id(role_id)
+        except RoleRepository.model_class.DoesNotExist:
+            raise NotFound("角色不存在")
+        valid_user_ids = [
+            uid for uid in user_ids if User.objects.filter(id=uid).exists()
+        ]
+        if len(valid_user_ids) != len(user_ids):
+            raise ValidationError(
+                {"invalid_ids": list(set(user_ids) - set(valid_user_ids))}
+            )
+        role.users.set(valid_user_ids)
+        return role

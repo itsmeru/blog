@@ -210,7 +210,7 @@ def set_permissions():
             name="Update Post",
             function_zh="編輯貼文",
             is_active=True,
-            action= "update",
+            action="update",
             resource="posts",
             category="posts",
             api_url=r"/api/v1/posts/\\d+/",

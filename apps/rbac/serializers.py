@@ -5,30 +5,76 @@ from core.app.base.serializer import SuccessSerializer
 
 User = get_user_model()
 
+
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = [
-            'id', 'code', 'name', 'function_zh', 'is_active', 'action', 'resource',
-            'category', 'api_url', 'method', 'created_at', 'updated_at'
+            "id",
+            "code",
+            "name",
+            "function_zh",
+            "is_active",
+            "action",
+            "resource",
+            "category",
+            "api_url",
+            "method",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ["id", "created_at", "updated_at"]
 
-class RoleSerializer(serializers.ModelSerializer):
-    permissions = PermissionSerializer(many=True, read_only=True)
+
+class PermissionSimpleSerializer(serializers.ModelSerializer):
+    enabled = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Permission
+        fields = ["id", "function_zh", "enabled"]
+
+    def get_enabled(self, obj):
+        return obj.is_active
+
+
+class RoleSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
-        fields = [
-            'id', 'code', 'name', 'name_zh', 'description', 'is_active', 'category',
-            'permissions', 'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ["id", "name_zh", "is_active"]
 
-class RoleUserSerializer(serializers.ModelSerializer):
-    roles = serializers.StringRelatedField(many=True)
+
+class RoleDetailSerializer(serializers.ModelSerializer):
+    permission_groups = serializers.SerializerMethodField()
+
     class Meta:
-        model = User
-        fields = ['id', 'username', 'email', 'roles']
+        model = Role
+        fields = ["id", "code", "name_zh", "permission_groups"]
+
+    def get_permission_groups(self, obj):
+        permissions = obj.permissions.all()
+        return [
+            {"permissions": PermissionSimpleSerializer(permissions, many=True).data}
+        ]
+
+
+class RoleUserSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    nickname = serializers.CharField()
+    email = serializers.EmailField()
+    is_active = serializers.BooleanField()
+
+
+class RoleUsersDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name_zh = serializers.CharField()
+    total_user = serializers.IntegerField()
+    users = RoleUserSerializer(many=True)
+
+
+class RoleUsersUpdateSerializer(serializers.Serializer):
+    user_ids = serializers.ListField(
+        child=serializers.IntegerField(), help_text="使用者ID列表", allow_empty=True
+    )
 
 
 PermissionListResponseSerializer = SuccessSerializer(
@@ -38,14 +84,12 @@ PermissionSuccessResponseSerializer = SuccessSerializer(
     PermissionSerializer(), "PermissionSuccessResponseSerializer"
 )
 RoleListResponseSerializer = SuccessSerializer(
-    RoleSerializer(many=True), "RoleListResponseSerializer"
+    serializers.SerializerMethodField(), "RoleListResponseSerializer"
 )
-RoleSuccessResponseSerializer = SuccessSerializer(
-    RoleSerializer(), "RoleSuccessResponseSerializer"
+RoleDetailResponseSerializer = SuccessSerializer(
+    RoleDetailSerializer(), "RoleDetailResponseSerializer"
 )
 RoleUserListResponseSerializer = SuccessSerializer(
     RoleUserSerializer(many=True), "RoleUserListResponseSerializer"
 )
-BaseSuccessResponseSerializer = SuccessSerializer(
-    None, "BaseSuccessResponseSerializer"
-)
+BaseSuccessResponseSerializer = SuccessSerializer(None, "BaseSuccessResponseSerializer")

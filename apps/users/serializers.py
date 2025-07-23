@@ -32,14 +32,19 @@ class LoginSerializer(serializers.Serializer):
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(help_text="電子郵件")
 
+
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(help_text="電子郵件")
     verification_code = serializers.CharField(max_length=6, help_text="6位數驗證碼")
     new_password = serializers.CharField(min_length=6, help_text="新密碼")
 
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True, help_text="舊密碼")
-    new_password = serializers.CharField(write_only=True, min_length=6, help_text="新密碼")
+    new_password = serializers.CharField(
+        write_only=True, min_length=6, help_text="新密碼"
+    )
+
 
 class RefreshTokenSerializer(serializers.Serializer):
     refresh = serializers.CharField(help_text="Refresh token")

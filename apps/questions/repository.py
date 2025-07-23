@@ -48,7 +48,7 @@ class QuestionRepository:
                 setattr(question, field, value)
         question.save()
         return question
-    
+
     @staticmethod
     def delete_question(question):
         question.delete()

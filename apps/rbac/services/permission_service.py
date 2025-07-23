@@ -1,4 +1,5 @@
-from .repositories import PermissionRepository
+from apps.rbac.repositories import PermissionRepository
+
 
 class PermissionService:
     repository_class = PermissionRepository
@@ -27,4 +28,4 @@ class PermissionService:
 
     @classmethod
     def batch_update_permissions(cls, ids, is_active):
-        return cls.repository_class.batch_update_permissions(ids, is_active) 
+        return cls.repository_class.batch_update_permissions(ids, is_active)

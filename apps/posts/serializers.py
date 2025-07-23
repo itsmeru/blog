@@ -14,8 +14,8 @@ class PostSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "author", "created_at"]
 
     def get_image(self, obj):
-        request = self.context.get('request')
-        if obj.image and hasattr(obj.image, 'url'):
+        request = self.context.get("request")
+        if obj.image and hasattr(obj.image, "url"):
             url = obj.image.url
             if request is not None:
                 return request.build_absolute_uri(url)
@@ -42,6 +42,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
         if not value or len(value.strip()) < 1:
             raise serializers.ValidationError("內容不能為空")
         return value.strip()
+
 
 class PostUpdateSerializer(serializers.ModelSerializer):
     title = serializers.CharField(required=False, allow_null=True)

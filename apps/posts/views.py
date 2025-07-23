@@ -49,7 +49,7 @@ class PostCreateListView(GenericAPIView):
                 description="每頁筆數",
                 default=10,
             ),
-        ]
+        ],
     )
     def get(self, request):
         queryset = PostService.list_posts()
@@ -118,7 +118,11 @@ class PostDetailView(GenericAPIView):
         serializer = PostUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         post = PostService.update_post(
-            post_id, request.user, serializer.validated_data, partial=True, files=request.FILES
+            post_id,
+            request.user,
+            serializer.validated_data,
+            partial=True,
+            files=request.FILES,
         )
         return Response(
             {

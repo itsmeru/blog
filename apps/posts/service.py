@@ -43,10 +43,10 @@ class PostService:
         if post.author != user:
             raise PermissionDenied("您沒有權限修改此貼文")
         # 直接將 image 欄位設為檔案物件
-        if files and 'image' in files:
-            data['image'] = files['image']
-        elif 'image' in data and data['image'] is None:
-            data['image'] = None
+        if files and "image" in files:
+            data["image"] = files["image"]
+        elif "image" in data and data["image"] is None:
+            data["image"] = None
         post = cls.repository_class.update_post(post, data, partial=partial)
         return post
 
