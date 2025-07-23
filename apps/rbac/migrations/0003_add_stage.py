@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rbac', '0002_rename_role_zh_role_name_zh_remove_role_role_name_and_more'),
+        ("rbac", "0002_rename_role_zh_role_name_zh_remove_role_role_name_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='permission',
-            name='stage',
-            field=models.CharField(choices=[('frontstage', '前台'), ('backstage', '後台')], default='backstage', max_length=20, verbose_name='前台/後台'),
+            model_name="permission",
+            name="stage",
+            field=models.CharField(
+                choices=[("frontstage", "前台"), ("backstage", "後台")],
+                default="backstage",
+                max_length=20,
+                verbose_name="前台/後台",
+            ),
         ),
     ]

@@ -24,4 +24,3 @@ def SuccessSerializer(data_serializer: serializers.Serializer, name: str):
             "data": data_serializer,
         },
     )
-

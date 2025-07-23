@@ -1,6 +1,6 @@
 import base64
 
-from apps.accounts.models import Account
+from apps.users.models import User
 from django.db import models
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -14,16 +14,16 @@ class Post(models.Model):
     image_type = models.CharField(max_length=50, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    author = models.ForeignKey(Account, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta:
-        ordering = ['-created_at']
-    
+        ordering = ["-created_at"]
+
     def get_image_data_url(self):
         if self.image and isinstance(self.image, bytes):
-                return f"data:{self.image_type};base64,{base64.b64encode(self.image).decode('utf-8')}"
+            return f"data:{self.image_type};base64,{base64.b64encode(self.image).decode('utf-8')}"
         return None
-    
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -32,9 +32,11 @@ class Post(models.Model):
             "tags": self.tags,
             "image": self.get_image_data_url(),
             "author": self.author.username,
-            "created_at": self.created_at.strftime("%Y-%m-%d %H:%M") if self.created_at else None,
+            "created_at": (
+                self.created_at.strftime("%Y-%m-%d %H:%M") if self.created_at else None
+            ),
         }
-    
+
     @classmethod
     def create_post_with_image(cls, title, content, author, tags="", image_file=None):
         image_data = None
@@ -42,34 +44,33 @@ class Post(models.Model):
         if image_file:
             image_data = image_file.read()
             image_type = image_file.content_type
-        
+
         return cls.objects.create(
             title=title,
             content=content,
             tags=tags,
             image=image_data,
             image_type=image_type,
-            author=author
+            author=author,
         )
-    
+
     @classmethod
     def get_posts(cls, page, size, keyword, tags=""):
         posts = cls.objects.all()
-        
+
         if keyword:
             posts = posts.filter(
                 Q(title__icontains=keyword) | Q(content__icontains=keyword)
             )
-        
+
         if tags:
-            tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
+            tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
             if tag_list:
                 tag_queries = Q()
                 for tag in tag_list:
                     tag_queries |= Q(tags__icontains=tag)
                 posts = posts.filter(tag_queries)
-        
+
         paginator = Paginator(posts, size)
         posts_page = paginator.get_page(page)
         return posts_page
-    

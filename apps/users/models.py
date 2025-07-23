@@ -8,8 +8,6 @@ from django.utils.translation import gettext_lazy as _
 
 from core.mixins.choices import DepartmentChoicesMixin
 
-# Create your models here.
-
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):

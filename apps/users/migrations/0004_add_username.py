@@ -6,18 +6,28 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0003_user_department'),
+        ("users", "0003_user_department"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='username',
+            model_name="user",
+            name="username",
             field=models.CharField(blank=True, max_length=50, null=True, unique=True),
         ),
         migrations.AlterField(
-            model_name='user',
-            name='department',
-            field=models.CharField(blank=True, choices=[('tech', '技術部'), ('sales', '業務部'), ('accounting', '會計部'), ('operation', '營運部')], max_length=50, null=True),
+            model_name="user",
+            name="department",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("tech", "技術部"),
+                    ("sales", "業務部"),
+                    ("accounting", "會計部"),
+                    ("operation", "營運部"),
+                ],
+                max_length=50,
+                null=True,
+            ),
         ),
     ]

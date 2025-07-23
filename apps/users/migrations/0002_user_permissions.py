@@ -6,14 +6,16 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rbac', '0001_initial'),
-        ('users', '0001_initial'),
+        ("rbac", "0001_initial"),
+        ("users", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='permissions',
-            field=models.ManyToManyField(blank=True, related_name='users', to='rbac.permission'),
+            model_name="user",
+            name="permissions",
+            field=models.ManyToManyField(
+                blank=True, related_name="users", to="rbac.permission"
+            ),
         ),
     ]

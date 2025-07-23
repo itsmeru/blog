@@ -10,7 +10,7 @@ from django.db.models import Count, Q
 from .models import Permission, Role, RoleHierarchy, RolePermission
 
 
-class PermissionRepository():
+class PermissionRepository:
     """權限資料存取層"""
 
     model_class = Permission
@@ -181,7 +181,7 @@ class PermissionRepository():
         return cls.filter(id__in=permission_ids).update(is_active=is_active)
 
 
-class RoleRepository(BaseRepository[Role]):
+class RoleRepository:
     """角色資料存取層"""
 
     model_class = Role
@@ -710,7 +710,7 @@ class UserPermissionRepository:
         return result
 
 
-class UserRepository(BaseRepository):
+class UserRepository:
     """使用者資料存取層"""
 
     @classmethod

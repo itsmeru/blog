@@ -6,22 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rbac', '0001_initial'),
+        ("rbac", "0001_initial"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='role',
-            old_name='role_zh',
-            new_name='name_zh',
+            model_name="role",
+            old_name="role_zh",
+            new_name="name_zh",
         ),
         migrations.RemoveField(
-            model_name='role',
-            name='role_name',
+            model_name="role",
+            name="role_name",
         ),
         migrations.AlterField(
-            model_name='role',
-            name='name',
-            field=models.CharField(max_length=100, verbose_name='角色英文名稱'),
+            model_name="role",
+            name="name",
+            field=models.CharField(max_length=100, verbose_name="角色英文名稱"),
         ),
     ]

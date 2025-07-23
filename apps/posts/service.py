@@ -2,19 +2,22 @@ from apps.posts.repository import PostRepository
 from apps.posts.serializers import PostCreateSerializer
 from rest_framework.exceptions import NotFound, PermissionDenied
 
+
 class PostService:
     @staticmethod
     def create_post(data, user):
-        serializer = PostCreateSerializer(data=data, context={'request': {'user': user}})
+        serializer = PostCreateSerializer(
+            data=data, context={"request": {"user": user}}
+        )
         serializer.is_valid(raise_exception=True)
-        
-        image_file = serializer.validated_data.get('image')
+
+        image_file = serializer.validated_data.get("image")
         post = PostRepository.create_post(
-            title=serializer.validated_data['title'],
-            content=serializer.validated_data['content'],
+            title=serializer.validated_data["title"],
+            content=serializer.validated_data["content"],
             author=user,
-            tags=serializer.validated_data.get('tags', ''),
-            image_file=image_file
+            tags=serializer.validated_data.get("tags", ""),
+            image_file=image_file,
         )
         return post
 
@@ -37,12 +40,12 @@ class PostService:
             raise NotFound("貼文不存在")
         if post.author != user:
             raise PermissionDenied("您沒有權限修改此貼文")
-        
+
         # 處理圖片檔案
-        image_file = data.get('image')
+        image_file = data.get("image")
         if image_file:
-            data['image'] = image_file
-        
+            data["image"] = image_file
+
         post = PostRepository.update_post(post, data, partial=partial)
         return post
 
@@ -53,5 +56,5 @@ class PostService:
             raise NotFound("貼文不存在")
         if post.author != user:
             raise PermissionDenied("您沒有權限刪除此貼文")
-        
+
         return PostRepository.delete_post(post)

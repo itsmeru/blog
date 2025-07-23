@@ -1,52 +1,46 @@
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import GenericAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.parsers import FormParser
+from rest_framework.exceptions import ValidationError
 
-from core.app.base.pagination import CustomPageNumberPagination as StandardResultsSetPagination
 from core.app.base.serializer import BaseErrorSerializer
 
 from .serializers import (
-    DepartmentListResponseSerializer,
-    ForgotPasswordResponseSerializer,
     ForgotPasswordSerializer,
     LoginSerializer,
     LoginSuccessResponseSerializer,
-    MeResponseSerializer,
+    RegisterSuccessResponseSerializer,
+    LogoutSuccessResponseSerializer,
+    ChangePasswordSuccessResponseSerializer,
+    ForgotPasswordSuccessResponseSerializer,
+    ResetPasswordSuccessResponseSerializer,
     RefreshTokenResponseSerializer,
-    RefreshTokenSerializer,
     RegisterSerializer,
-    UserCreateResponseSerializer,
-    UserCreateSerializer,
-    UserDetailResponseSerializer,
-    UserDetailSerializer,
-    UserListPaginationResponseSerializer,
-    UserListSerializer,
-    UserPatchSerializer,
-    UserUpdateResponseSerializer,
-    UserUpdateSerializer,
+    ResetPasswordSerializer,
 )
 from .service import UserService
+from apps.users.models import User
 
-# Create your views here.
 
-
-class RegisterView(APIView):
+class RegisterView(GenericAPIView):
     permission_classes = [AllowAny]
+    parser_classes = (FormParser,)
 
     @extend_schema(
-        summary="註冊新用戶",
         request=RegisterSerializer,
         responses={
-            201: RegisterSerializer,
+            201: RegisterSuccessResponseSerializer,
             400: BaseErrorSerializer,
         },
+        description="註冊新用戶",
         tags=["Users"],
     )
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = UserService.register_user(
@@ -55,16 +49,30 @@ class RegisterView(APIView):
             nickname=serializer.validated_data["nickname"],
             password=serializer.validated_data["password"],
         )
-        return Response(data=RegisterSerializer(user).data, status=201)
+        return Response(
+            {
+                "success": True,
+                "message": "註冊成功，請登入",
+                "data": {
+                    "user_id": user.id,
+                    "nickname": user.nickname,
+                },
+            },
+            status=201,
+        )
 
 
-class LoginView(APIView):
+class LoginView(GenericAPIView):
     permission_classes = [AllowAny]
+    parser_classes = (FormParser,)
 
     @extend_schema(
-        summary="使用者登入",
         request=LoginSerializer,
-        responses={200: LoginSuccessResponseSerializer, 400: BaseErrorSerializer},
+        responses={
+            200: LoginSuccessResponseSerializer,
+            400: BaseErrorSerializer,
+        },
+        description="使用者登入",
         tags=["Users"],
     )
     def post(self, request):
@@ -75,252 +83,181 @@ class LoginView(APIView):
             password=serializer.validated_data["password"],
         )
         refresh = RefreshToken.for_user(user)
-        return Response(
+
+        response = Response(
             {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "user_id": user.id,
-                "nickname": user.nickname,
+                "success": True,
+                "message": "登入成功",
+                "data": {
+                    "access": str(refresh.access_token),
+                    "user_id": user.id,
+                    "nickname": user.nickname,
+                },
             }
         )
 
+        response.set_cookie(
+            "refresh_token",
+            str(refresh),
+            httponly=True,
+            samesite="Lax",
+            max_age=60 * 60 * 24 * 7,
+        )
 
-class ForgotPasswordView(APIView):
-    permission_classes = [AllowAny]
+        return response
+
+
+class LogoutView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="重設密碼流程啟動",
+        responses={
+            204: LogoutSuccessResponseSerializer,
+            403: BaseErrorSerializer,
+        },
+        description="使用者登出",
+        tags=["Users"],
+    )
+    def post(self, request):
+        response = Response(
+            {"success": True, "message": "登出成功", "data": {}}, status=204
+        )
+        response.delete_cookie("refresh_token", path="/")
+        return response
+
+
+class ChangePasswordView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (FormParser,)
+    serializer_class = ForgotPasswordSerializer
+
+    @extend_schema(
         request=ForgotPasswordSerializer,
         responses={
-            200: ForgotPasswordResponseSerializer,
-            404: BaseErrorSerializer,
+            200: ChangePasswordSuccessResponseSerializer,
+            400: BaseErrorSerializer,
         },
+        description="變更密碼",
         tags=["Users"],
     )
     def post(self, request):
         serializer = ForgotPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = UserService.start_forgot_password(serializer.validated_data["account"])
-        return Response(
-            data={
-                "message": "重設密碼流程啟動（請串接 email/sms）",
-                "user_found": bool(user),
+        user = request.user
+        old_password = serializer.validated_data["old_password"]
+        new_password = serializer.validated_data["new_password"]
+
+        if not user.check_password(old_password):
+            return Response(
+                {"success": False, "message": "舊密碼錯誤", "data": {}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+        response = Response(
+            {
+                "success": True,
+                "message": "密碼更改成功，請重新登入",
+                "data": {"require_relogin": True},
             }
         )
+        response.delete_cookie("refresh_token", path="/")
+        return response
 
 
-class MeView(APIView):
-    permission_classes = [IsAuthenticated]
+class ForgotPasswordView(GenericAPIView):
+    permission_classes = [AllowAny]
+    parser_classes = (FormParser,)
 
     @extend_schema(
-        summary="取得個人資料",
-        responses={200: MeResponseSerializer, 401: BaseErrorSerializer},
+        request=ForgotPasswordSerializer,
+        responses={
+            200: ForgotPasswordSuccessResponseSerializer,
+            404: BaseErrorSerializer,
+        },
+        description="忘記密碼發送驗證碼",
         tags=["Users"],
     )
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response(
-                data={"detail": "Authentication credentials were not provided."},
-                status=401,
-            )
-        user = request.user
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+
+        reset_data = UserService.forgot_password(email)
         return Response(
-            data={
-                "user_id": user.id,
-                "email": user.email,
-                "phone": user.phone,
-                "nickname": user.nickname,
+            {
+                "success": True,
+                "message": f"驗證碼已發送到 {email}，請檢查您的郵箱",
+                "data": {},
             }
         )
 
 
-class RefreshTokenView(APIView):
+class ResetPasswordView(GenericAPIView):
+    permission_classes = [AllowAny]
+    parser_classes = (FormParser,)
+
+    @extend_schema(
+        request=ResetPasswordSerializer,
+        responses={
+            200: ResetPasswordSuccessResponseSerializer,
+            400: BaseErrorSerializer,
+            404: BaseErrorSerializer,
+        },
+        description="重置密碼",
+        tags=["Users"],
+    )
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data["email"]
+        verification_code = serializer.validated_data["verification_code"]
+        new_password = serializer.validated_data["new_password"]
+
+        UserService.reset_password(email, verification_code, new_password)
+        return Response(
+            {"success": True, "message": "密碼重置成功，請使用新密碼登入", "data": {}}
+        )
+
+
+class RefreshTokenView(GenericAPIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        summary="刷新 Access Token",
-        request=RefreshTokenSerializer,
-        responses={200: RefreshTokenResponseSerializer, 400: BaseErrorSerializer},
+        responses={
+            200: RefreshTokenResponseSerializer,
+            400: BaseErrorSerializer,
+        },
+        description="刷新 Access Token",
         tags=["Users"],
     )
     def post(self, request):
-        serializer = RefreshTokenSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = UserService.refresh_token(serializer.validated_data["refresh"])
-        return Response(data)
+        refresh_token = request.COOKIES.get("refresh_token")
+        if not refresh_token:
+            return Response(
+                {"success": False, "message": "未找到 refresh token", "data": {}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
+        data = UserService.refresh_token(refresh_token)
 
-class UserListView(ListAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = UserListSerializer
-    pagination_class = StandardResultsSetPagination
-
-    def get_queryset(self):
-        """Override get_queryset to provide custom filtering"""
-        department = self.request.query_params.get("department")
-        is_active = self.request.query_params.get("is_active")
-        search = self.request.query_params.get("search")
-
-        if is_active is not None:
-            is_active = is_active.lower() == "true"
-
-        return UserService.get_users_list(
-            department=department, is_active=is_active, search=search
+        response = Response(
+            {
+                "success": True,
+                "message": "Token 刷新成功",
+                "data": {"access": data["access"]},
+            }
         )
 
-    @extend_schema(
-        summary="取得使用者列表",
-        parameters=[
-            OpenApiParameter(
-                name="department", description="部門", required=False, type=str
-            ),
-            OpenApiParameter(
-                name="is_active", description="是否啟用", required=False, type=bool
-            ),
-            OpenApiParameter(
-                name="search", description="搜尋關鍵字", required=False, type=str
-            ),
-            OpenApiParameter(name="page", description="頁數", required=False, type=int),
-            OpenApiParameter(
-                name="page_size", description="每頁筆數", required=False, type=int
-            ),
-        ],
-        responses={200: UserListPaginationResponseSerializer, 401: BaseErrorSerializer},
-        tags=["User Management"],
-    )
-    def get(self, request):
-        return super().get(request)
-
-    @extend_schema(
-        summary="新增使用者",
-        request=UserCreateSerializer,
-        responses={201: UserCreateResponseSerializer, 400: BaseErrorSerializer},
-        tags=["User Management"],
-    )
-    def post(self, request):
-        serializer = UserCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = UserService.create_user(**serializer.validated_data)
-        return Response(UserListSerializer(user).data, status=status.HTTP_201_CREATED)
-
-
-class UserDetailView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        summary="取得使用者詳細資料",
-        parameters=[
-            OpenApiParameter(
-                name="stage",
-                description="前台/後台篩選",
-                required=False,
-                type=str,
-                enum=["frontstage", "backstage"],
-            ),
-            OpenApiParameter(
-                name="enabled",
-                description="權限啟用狀態篩選",
-                required=False,
-                type=bool,
-            ),
-        ],
-        responses={200: UserDetailResponseSerializer, 404: BaseErrorSerializer},
-        tags=["User Management"],
-    )
-    def get(self, request, pk):
-        user = UserService.get_user_detail(pk)
-        stage = request.query_params.get("stage")
-        enabled = request.query_params.get("enabled")
-
-        # Convert enabled string to boolean if provided
-        if enabled is not None:
-            enabled = enabled.lower() == "true"
-
-        # 使用 service 層準備數據
-        permission_groups = UserService.get_user_permission_groups(
-            user, stage=stage, enabled=enabled
-        )
-        permission_stats = UserService.get_user_permission_stats(
-            user, stage=stage, enabled=enabled
+        response.set_cookie(
+            "refresh_token",
+            data["refresh"],
+            httponly=True,
+            secure=True,
+            samesite="Lax",
+            max_age=60 * 60 * 24 * 7,
         )
 
-
-        user_data = {
-            "id": user.id,
-            "nickname": user.nickname,
-            "department": user.department,
-            "username": user.username,
-            "email": user.email,
-            "is_active": user.is_active,
-            "roles": [
-                {"id": role.id, "name": role.name, "name_zh": role.name_zh}
-                for role in user.roles.all()
-            ],
-            "permission_groups": permission_groups,
-            "total_permissions": permission_stats["total_permissions"],
-            "enabled_permissions_count": permission_stats["enabled_permissions_count"],
-        }
-
-        serializer = UserDetailSerializer(user_data)
-        return Response(serializer.data)
-
-    @extend_schema(
-        summary="更新使用者",
-        request=UserUpdateSerializer,
-        responses={
-            200: UserUpdateResponseSerializer,
-            400: BaseErrorSerializer,
-            404: BaseErrorSerializer,
-        },
-        tags=["User Management"],
-    )
-    def put(self, request, pk):
-        serializer = UserUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        # Filter out None values to avoid setting fields to None unnecessarily
-        update_data = {
-            k: v for k, v in serializer.validated_data.items() if v is not None
-        }
-
-        user = UserService.update_user(pk, **update_data)
-        return Response(UserListSerializer(user).data)
-
-    @extend_schema(
-        summary="部分更新使用者 (僅限 is_active)",
-        request=UserPatchSerializer,
-        responses={
-            200: UserUpdateResponseSerializer,
-            400: BaseErrorSerializer,
-            404: BaseErrorSerializer,
-        },
-        tags=["User Management"],
-    )
-    def patch(self, request, pk):
-        serializer = UserPatchSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = UserService.update_user(pk, is_active=serializer.validated_data["is_active"])
-        return Response(UserListSerializer(user).data)
-
-    @extend_schema(
-        summary="刪除使用者 (硬刪除)",
-        responses={204: None, 404: BaseErrorSerializer},
-        tags=["User Management"],
-    )
-    def delete(self, request, pk):
-        UserService.delete_user(pk)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class DepartmentListView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        summary="取得部門選項列表",
-        responses={200: DepartmentListResponseSerializer, 401: BaseErrorSerializer},
-        tags=["User Management"],
-    )
-    def get(self, request):
-        departments = UserService.get_department_options()
-        return Response(departments)
+        return response

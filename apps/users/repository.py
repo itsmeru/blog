@@ -1,60 +1,51 @@
 from django.contrib.auth import get_user_model
-from django.db import models
-
-# from core.app.base.repository import BaseRepository
+from django.db.models import Q
 
 User = get_user_model()
 
 
-class UserRepository():
-    model_class = User
-
-    @classmethod
-    def create_user(cls, **kwargs) -> User:
-        """Create a new user with the given fields."""
+class UserRepository:
+    @staticmethod
+    def create_user(**kwargs):
         return User.objects.create_user(**kwargs)
 
-    @classmethod
-    def get_by_email(cls, email: str) -> User:
-        """Get a user by their email address."""
-        return cls.get_by_field("email", email)
+    @staticmethod
+    def get_by_email(email):
+        return User.objects.filter(email=email).first()
 
-    @classmethod
-    def get_by_phone(cls, phone: str) -> User:
-        """Get a user by their phone number."""
-        return cls.get_by_field("phone", phone)
+    @staticmethod
+    def get_by_phone(phone):
+        return User.objects.filter(phone=phone).first()
 
-    @classmethod
-    def get_by_account(cls, account: str) -> User:
-        """Get a user by either email or phone."""
-        return cls.filter(models.Q(email=account) | models.Q(username=account)).first()
+    @staticmethod
+    def get_by_account(account):
+        return User.objects.filter(Q(email=account) | Q(username=account)).first()
 
-    @classmethod
-    def update_password(cls, user: User, new_password: str) -> User:
-        """Update a user's password."""
+    @staticmethod
+    def update_password(user, new_password):
         user.set_password(new_password)
         user.save()
         return user
 
-    @classmethod
-    def get_active_users(cls) -> models.QuerySet[User]:
-        """Get all active users."""
-        return cls.filter(is_active=True)
+    @staticmethod
+    def get_active_users():
+        return User.objects.filter(is_active=True)
 
-    @classmethod
-    def deactivate_user(cls, user: User) -> User:
-        """Deactivate a user account."""
-        return cls.update(user, is_active=False)
+    @staticmethod
+    def deactivate_user(user):
+        user.is_active = False
+        user.save()
+        return user
 
-    @classmethod
-    def activate_user(cls, user: User) -> User:
-        """Activate a user account."""
-        return cls.update(user, is_active=True)
+    @staticmethod
+    def activate_user(user):
+        user.is_active = True
+        user.save()
+        return user
 
-    @classmethod
-    def get_users_with_filters(cls, department=None, is_active=None, search=None):
-        """Get users with optional filters for department, status and search."""
-        queryset = cls._base_query().select_related().prefetch_related("roles")
+    @staticmethod
+    def get_users_with_filters(department=None, is_active=None, search=None):
+        queryset = User.objects.all()
 
         if department:
             queryset = queryset.filter(department=department)
@@ -64,24 +55,21 @@ class UserRepository():
 
         if search:
             queryset = queryset.filter(
-                models.Q(nickname__icontains=search)
-                | models.Q(username__icontains=search)
+                Q(nickname__icontains=search) | Q(username__icontains=search)
             )
 
         return queryset.order_by("-created_at")
 
-    @classmethod
-    def get_user_by_id_with_relations(cls, user_id: int):
-        """Get user by ID with all related data loaded."""
+    @staticmethod
+    def get_user_by_id_with_relations(user_id):
         return (
-            cls._base_query()
-            .select_related()
+            User.objects.select_related()
             .prefetch_related("roles", "permissions", "roles__permissions")
             .filter(id=user_id)
             .first()
         )
 
-    @classmethod
-    def hard_delete_user(cls, user: User) -> None:
-        """Hard delete a user (permanent deletion)."""
+    @staticmethod
+    def hard_delete_user(user):
         user.delete()
+        return True

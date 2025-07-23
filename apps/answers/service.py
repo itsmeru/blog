@@ -4,17 +4,16 @@ from apps.questions.models import Question
 from rest_framework.exceptions import NotFound, PermissionDenied
 from apps.answers.models import Answer
 
+
 class AnswerService:
     @staticmethod
     def create_answer(data, user):
         serializer = AnswerCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        question_id = serializer.validated_data['question_id']
+        question_id = serializer.validated_data["question_id"]
         question = Question.objects.get(id=question_id)
         answer = Answer.objects.create(
-            content=serializer.validated_data['content'],
-            author=user,
-            question=question
+            content=serializer.validated_data["content"], author=user, question=question
         )
         question.answer_count = question.answers.count()
         question.save()
@@ -26,10 +25,12 @@ class AnswerService:
         if not question:
             raise NotFound("問題不存在")
         answers = AnswerRepository.get_by_question(question_id)
-        
+
         is_liked_map = {}
         if user and user.is_authenticated:
-            liked_ids = set(AnswerRepository.get_liked_answer_ids_by_user(user, question_id))
+            liked_ids = set(
+                AnswerRepository.get_liked_answer_ids_by_user(user, question_id)
+            )
             for answer in answers:
                 is_liked_map[answer.id] = answer.id in liked_ids
         else:
