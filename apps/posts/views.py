@@ -2,21 +2,25 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.parsers import FormParser
+from rest_framework.parsers import FormParser, MultiPartParser
 from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter
 
 from apps.posts.serializers import (
     PostSerializer,
     PostCreateSerializer,
+    PostUpdateSerializer,
     PostSuccessResponseSerializer,
     PostListResponseSerializer,
 )
 from apps.posts.service import PostService
 from core.app.base.serializer import BaseErrorSerializer, DeleteSuccessSerializer
+from core.app.base.pagination import CustomPageNumberPagination
 
 
 class PostCreateListView(GenericAPIView):
     parser_classes = (FormParser,)
+    pagination_class = CustomPageNumberPagination
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -28,15 +32,30 @@ class PostCreateListView(GenericAPIView):
             200: PostListResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="取得所有貼文",
+        summary="取得所有貼文",
         tags=["Posts"],
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="分頁頁數",
+                default=1,
+            ),
+            OpenApiParameter(
+                name="size",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="每頁筆數",
+                default=10,
+            ),
+        ]
     )
     def get(self, request):
-        posts = PostService.list_posts()
-        serializer = PostSerializer(posts, many=True, context={"request": request})
-        return Response(
-            {"success": True, "message": "查詢成功", "data": serializer.data}
-        )
+        queryset = PostService.list_posts()
+        page = self.paginate_queryset(queryset)
+        serializer = PostSerializer(page, many=True, context={"request": request})
+        return self.get_paginated_response(serializer.data)
 
     @extend_schema(
         request=PostCreateSerializer,
@@ -44,7 +63,7 @@ class PostCreateListView(GenericAPIView):
             201: PostSuccessResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="建立貼文",
+        summary="建立貼文",
         tags=["Posts"],
     )
     def post(self, request):
@@ -60,7 +79,7 @@ class PostCreateListView(GenericAPIView):
 
 
 class PostDetailView(GenericAPIView):
-    parser_classes = (FormParser,)
+    parser_classes = (FormParser, MultiPartParser)
 
     def get_permissions(self):
         if self.request.method == "GET":
@@ -75,7 +94,7 @@ class PostDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="查詢貼文",
+        summary="查詢貼文",
         tags=["Posts"],
     )
     def get(self, request, post_id=None):
@@ -85,48 +104,27 @@ class PostDetailView(GenericAPIView):
         )
 
     @extend_schema(
-        request=PostCreateSerializer,
+        request=PostUpdateSerializer,
         responses={
             200: PostSuccessResponseSerializer,
             400: BaseErrorSerializer,
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="部分更新貼文",
+        summary="更新貼文",
         tags=["Posts"],
     )
     def patch(self, request, post_id=None):
+        serializer = PostUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
         post = PostService.update_post(
-            post_id, request.user, request.data, partial=True
+            post_id, request.user, serializer.validated_data, partial=True, files=request.FILES
         )
         return Response(
             {
                 "success": True,
-                "message": "貼文部分更新成功",
-                "data": PostSerializer(post).data,
-            }
-        )
-
-    @extend_schema(
-        request=PostCreateSerializer,
-        responses={
-            200: PostSuccessResponseSerializer,
-            400: BaseErrorSerializer,
-            403: BaseErrorSerializer,
-            404: BaseErrorSerializer,
-        },
-        description="全量更新貼文",
-        tags=["Posts"],
-    )
-    def put(self, request, post_id=None):
-        post = PostService.update_post(
-            post_id, request.user, request.data, partial=False
-        )
-        return Response(
-            {
-                "success": True,
-                "message": "貼文全量更新成功",
-                "data": PostSerializer(post).data,
+                "message": "貼文更新成功",
+                "data": PostSerializer(post, context={"request": request}).data,
             }
         )
 
@@ -136,7 +134,7 @@ class PostDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="刪除貼文",
+        summary="刪除貼文",
         tags=["Posts"],
     )
     def delete(self, request, post_id=None):

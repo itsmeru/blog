@@ -1,21 +1,19 @@
 from apps.questions.repository import QuestionRepository
 from apps.questions.serializers import QuestionCreateSerializer
 from rest_framework.exceptions import NotFound, PermissionDenied
+from .models import Question
 
 
 class QuestionService:
     repository_class = QuestionRepository
 
-    @classmethod
-    def create_question(cls, data, user):
-        serializer = QuestionCreateSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-
-        question = cls.repository_class.create_question(
-            title=serializer.validated_data["title"],
-            content=serializer.validated_data["content"],
+    @staticmethod
+    def create_question(data, user):
+        question = Question.objects.create(
+            title=data.get("title"),
+            content=data.get("content"),
             author=user,
-            tags=serializer.validated_data.get("tags", ""),
+            tags=data.get("tags", ""),
         )
         return question
 

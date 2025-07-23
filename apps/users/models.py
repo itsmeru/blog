@@ -6,8 +6,6 @@ from django.contrib.auth.models import (
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.mixins.choices import DepartmentChoicesMixin
-
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -26,7 +24,7 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-class User(AbstractBaseUser, PermissionsMixin, DepartmentChoicesMixin):
+class User(AbstractBaseUser, PermissionsMixin):
     # --- Django 認證系統預設必須欄位 ---
     email = models.EmailField(
         _("電子郵件"), unique=True, null=True, blank=True
@@ -47,12 +45,6 @@ class User(AbstractBaseUser, PermissionsMixin, DepartmentChoicesMixin):
     enabled_permissions = models.JSONField(_("啟用的權限"), default=list, blank=True)
     disabled_permissions = models.JSONField(_("停用的權限"), default=list, blank=True)
     # roles = models.ManyToManyField("rbac.Role", related_name="users", blank=True)
-    department = models.CharField(
-        max_length=50,
-        null=True,
-        blank=True,
-        choices=DepartmentChoicesMixin.DEPARTMENT_CHOICES,
-    )
     # permissions = models.ManyToManyField(
     #     "rbac.Permission", related_name="users", blank=True
     # )

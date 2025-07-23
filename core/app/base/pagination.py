@@ -1,34 +1,20 @@
 from rest_framework.pagination import PageNumberPagination
-
+from rest_framework.response import Response
 
 class CustomPageNumberPagination(PageNumberPagination):
-    page_size = 25
-    page_size_query_param = "page_size"
+    page_size_query_param = 'size'
+    page_query_param = 'page'
     max_page_size = 100
+    page_size = 10
 
-    def get_paginated_response_schema(self, schema):
-        return {
-            "type": "object",
-            "properties": {
-                "success": {"type": "boolean", "default": True},
-                "message": {"type": "string", "default": "ok"},
-                "data": {
-                    "type": "object",
-                    "properties": {
-                        "count": {"type": "integer", "example": 123},
-                        "next": {
-                            "type": ["string", "null"],
-                            "format": "uri",
-                            "example": None,
-                        },
-                        "previous": {
-                            "type": ["string", "null"],
-                            "format": "uri",
-                            "example": None,
-                        },
-                        "results": schema,
-                    },
-                },
+    def get_paginated_response(self, data):
+        return Response({
+            "success": True,
+            "message": "查詢成功",
+            "pagination": {
+                "count": self.page.paginator.count,
+                "next": self.get_next_link(),
+                "previous": self.get_previous_link(),
             },
-            "required": ["success", "message", "data"],
-        }
+            "data": data
+        })

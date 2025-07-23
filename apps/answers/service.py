@@ -13,7 +13,10 @@ class AnswerService:
         serializer = AnswerCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         question_id = serializer.validated_data["question_id"]
-        question = Question.objects.get(id=question_id)
+        try:
+            question = Question.objects.get(id=question_id)
+        except Question.DoesNotExist:
+            raise NotFound("問題不存在")
         answer = Answer.objects.create(
             content=serializer.validated_data["content"], author=user, question=question
         )

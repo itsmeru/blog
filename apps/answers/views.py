@@ -24,9 +24,9 @@ class AnswerCreateView(GenericAPIView):
         request=AnswerCreateSerializer,
         responses={
             201: AnswerSuccessResponseSerializer,
-            400: BaseErrorSerializer,
+            404: BaseErrorSerializer,
         },
-        description="建立回答",
+        summary="建立回答",
         tags=["Answers"],
     )
     def post(self, request):
@@ -50,7 +50,7 @@ class AnswerListView(GenericAPIView):
             200: AnswerListResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="取得所有回答",
+        summary="取得所有回答",
         tags=["Questions"],
     )
     def get(self, request, question_id=None):
@@ -74,7 +74,7 @@ class AnswerDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="更新回答",
+        summary="更新回答",
         tags=["Answers"],
     )
     def put(self, request, answer_id=None):
@@ -99,7 +99,7 @@ class AnswerDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="部分更新回答",
+        summary="部分更新回答",
         tags=["Answers"],
     )
     def patch(self, request, answer_id=None):
@@ -123,7 +123,7 @@ class AnswerDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="刪除回答",
+        summary="刪除回答",
         tags=["Answers"],
     )
     def delete(self, request, answer_id=None):
@@ -137,7 +137,7 @@ class AnswerDetailView(GenericAPIView):
         400: BaseErrorSerializer,
         404: BaseErrorSerializer,
     },
-    description="按讚/取消按讚回答",
+    summary="按讚/取消按讚回答",
     tags=["Answers"],
 )
 class AnswerLikeView(GenericAPIView):

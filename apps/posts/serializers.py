@@ -1,6 +1,4 @@
 from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_field
-from drf_spectacular.types import OpenApiTypes
 from .models import Post
 from core.app.base.serializer import SuccessSerializer
 
@@ -15,13 +13,21 @@ class PostSerializer(serializers.ModelSerializer):
         fields = ["id", "title", "content", "tags", "image", "author", "created_at"]
         read_only_fields = ["id", "author", "created_at"]
 
-    @extend_schema_field(OpenApiTypes.STR)
     def get_image(self, obj):
-        return obj.get_image_data_url()
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            url = obj.image.url
+            if request is not None:
+                return request.build_absolute_uri(url)
+            return url
+        return None
 
 
 class PostCreateSerializer(serializers.ModelSerializer):
-    image = serializers.FileField(required=False, allow_null=True)
+    title = serializers.CharField(required=True, allow_null=False)
+    content = serializers.CharField(required=True, allow_null=False)
+    tags = serializers.CharField(required=False, allow_null=True)
+    image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Post
@@ -37,18 +43,15 @@ class PostCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("內容不能為空")
         return value.strip()
 
-    def validate_image(self, value):
-        if value:
-            if value.size > 5 * 1024 * 1024:
-                raise serializers.ValidationError("圖片大小不能超過5MB")
+class PostUpdateSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(required=False, allow_null=True)
+    content = serializers.CharField(required=False, allow_null=True)
+    tags = serializers.CharField(required=False, allow_null=True)
+    image = serializers.ImageField(required=False, allow_null=True)
 
-            allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-            if value.content_type not in allowed_types:
-                raise serializers.ValidationError(
-                    "只支援 JPEG、PNG、GIF、WebP 格式的圖片"
-                )
-
-        return value
+    class Meta:
+        model = Post
+        fields = ["title", "content", "tags", "image"]
 
 
 PostSuccessResponseSerializer = SuccessSerializer(

@@ -31,28 +31,15 @@ class LoginSerializer(serializers.Serializer):
 
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(help_text="電子郵件")
-    old_password = serializers.CharField(
-        write_only=True, required=False, help_text="舊密碼"
-    )
-    new_password = serializers.CharField(
-        write_only=True, required=False, help_text="新密碼"
-    )
-
-    def validate(self, attrs):
-        if "old_password" not in attrs and "new_password" not in attrs:
-            return attrs
-
-        if "old_password" not in attrs or "new_password" not in attrs:
-            raise serializers.ValidationError("變更密碼需要提供舊密碼和新密碼")
-
-        return attrs
-
 
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField(help_text="電子郵件")
     verification_code = serializers.CharField(max_length=6, help_text="6位數驗證碼")
     new_password = serializers.CharField(min_length=6, help_text="新密碼")
 
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True, help_text="舊密碼")
+    new_password = serializers.CharField(write_only=True, min_length=6, help_text="新密碼")
 
 class RefreshTokenSerializer(serializers.Serializer):
     refresh = serializers.CharField(help_text="Refresh token")

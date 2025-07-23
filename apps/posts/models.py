@@ -10,8 +10,7 @@ class Post(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
     tags = models.CharField(max_length=100, null=True, blank=True)
-    image = models.BinaryField(null=True, blank=True)
-    image_type = models.CharField(max_length=50, null=True, blank=True)
+    image = models.ImageField(upload_to='posts/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -19,9 +18,9 @@ class Post(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
-    def get_image_data_url(self):
-        if self.image and isinstance(self.image, bytes):
-            return f"data:{self.image_type};base64,{base64.b64encode(self.image).decode('utf-8')}"
+    def get_image_url(self):
+        if self.image:
+            return self.image.url
         return None
 
     def to_dict(self):
@@ -30,7 +29,7 @@ class Post(models.Model):
             "title": self.title,
             "content": self.content,
             "tags": self.tags,
-            "image": self.get_image_data_url(),
+            "image": self.get_image_url(),
             "author": self.author.username,
             "created_at": (
                 self.created_at.strftime("%Y-%m-%d %H:%M") if self.created_at else None

@@ -9,6 +9,7 @@ from rest_framework.parsers import FormParser, JSONParser
 from core.app.base.serializer import BaseErrorSerializer
 
 from .serializers import (
+    ChangePasswordSerializer,
     ForgotPasswordSerializer,
     LoginSerializer,
     LoginSuccessResponseSerializer,
@@ -34,7 +35,7 @@ class RegisterView(GenericAPIView):
             201: RegisterSuccessResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="註冊新用戶",
+        summary="註冊新用戶",
         tags=["Users"],
     )
     def post(self, request, *args, **kwargs):
@@ -69,7 +70,7 @@ class LoginView(GenericAPIView):
             200: LoginSuccessResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="使用者登入",
+        summary="使用者登入",
         tags=["Users"],
     )
     def post(self, request):
@@ -112,7 +113,7 @@ class LogoutView(GenericAPIView):
             204: LogoutSuccessResponseSerializer,
             403: BaseErrorSerializer,
         },
-        description="使用者登出",
+        summary="使用者登出",
         tags=["Users"],
     )
     def post(self, request):
@@ -126,19 +127,18 @@ class LogoutView(GenericAPIView):
 class ChangePasswordView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     parser_classes = (FormParser,)
-    serializer_class = ForgotPasswordSerializer
 
     @extend_schema(
-        request=ForgotPasswordSerializer,
+        request=ChangePasswordSerializer,
         responses={
             200: ChangePasswordSuccessResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="變更密碼",
+        summary="變更密碼",
         tags=["Users"],
     )
     def post(self, request):
-        serializer = ForgotPasswordSerializer(data=request.data)
+        serializer = ChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = request.user
         old_password = serializer.validated_data["old_password"]
@@ -173,7 +173,7 @@ class ForgotPasswordView(GenericAPIView):
             200: ForgotPasswordSuccessResponseSerializer,
             404: BaseErrorSerializer,
         },
-        description="忘記密碼發送驗證碼",
+        summary="忘記密碼發送驗證碼",
         tags=["Users"],
     )
     def post(self, request):
@@ -202,7 +202,7 @@ class ResetPasswordView(GenericAPIView):
             400: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="重置密碼",
+        summary="重設密碼",
         tags=["Users"],
     )
     def post(self, request):
@@ -227,7 +227,7 @@ class RefreshTokenView(GenericAPIView):
             200: RefreshTokenResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="刷新 Access Token",
+        summary="刷新 Access Token",
         tags=["Users"],
     )
     def post(self, request):

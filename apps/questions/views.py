@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter
 
 from apps.questions.serializers import (
     QuestionSerializer,
@@ -13,11 +14,13 @@ from apps.questions.serializers import (
 )
 from apps.questions.service import QuestionService
 from core.app.base.serializer import BaseErrorSerializer, DeleteSuccessSerializer
+from core.app.base.pagination import CustomPageNumberPagination
 
 
 class QuestionCreateListView(GenericAPIView):
     permission_classes = [AllowAny]
     parser_classes = (FormParser,)
+    pagination_class = CustomPageNumberPagination
 
     @extend_schema(
         responses={
@@ -25,17 +28,30 @@ class QuestionCreateListView(GenericAPIView):
             400: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="取得所有問題",
+        summary="取得所有問題",
         tags=["Questions"],
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="分頁頁數",
+                default=1,
+            ),
+            OpenApiParameter(
+                name="size",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="每頁筆數",
+                default=10,
+            ),
+        ]
     )
     def get(self, request):
-        questions = QuestionService.list_questions()
-        serializer = QuestionSerializer(
-            questions, many=True, context={"request": request}
-        )
-        return Response(
-            {"success": True, "message": "查詢成功", "data": serializer.data}
-        )
+        queryset = QuestionService.list_questions()
+        page = self.paginate_queryset(queryset)
+        serializer = QuestionSerializer(page, many=True, context={"request": request})
+        return self.get_paginated_response(serializer.data)
 
     @extend_schema(
         request=QuestionCreateSerializer,
@@ -43,7 +59,7 @@ class QuestionCreateListView(GenericAPIView):
             201: QuestionSuccessResponseSerializer,
             400: BaseErrorSerializer,
         },
-        description="建立問題",
+        summary="建立問題",
         tags=["Questions"],
     )
     def post(self, request):
@@ -73,7 +89,7 @@ class QuestionDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="查詢問題",
+        summary="查詢問題",
         tags=["Questions"],
     )
     def get(self, request, question_id=None):
@@ -94,7 +110,7 @@ class QuestionDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="部分更新問題",
+        summary="更新問題",
         tags=["Questions"],
     )
     def patch(self, request, question_id=None):
@@ -104,33 +120,11 @@ class QuestionDetailView(GenericAPIView):
         return Response(
             {
                 "success": True,
-                "message": "問題部分更新成功",
+                "message": "問題更新成功",
                 "data": QuestionSerializer(question).data,
             }
         )
 
-    @extend_schema(
-        request=QuestionCreateSerializer,
-        responses={
-            200: QuestionSuccessResponseSerializer,
-            400: BaseErrorSerializer,
-            403: BaseErrorSerializer,
-            404: BaseErrorSerializer,
-        },
-        description="全量更新問題",
-        tags=["Questions"],
-    )
-    def put(self, request, question_id=None):
-        question = QuestionService.update_question(
-            question_id, request.user, request.data, partial=False
-        )
-        return Response(
-            {
-                "success": True,
-                "message": "問題全量更新成功",
-                "data": QuestionSerializer(question).data,
-            }
-        )
 
     @extend_schema(
         responses={
@@ -138,7 +132,7 @@ class QuestionDetailView(GenericAPIView):
             403: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="刪除問題",
+        summary="刪除問題",
         tags=["Questions"],
     )
     def delete(self, request, question_id=None):
@@ -154,7 +148,7 @@ class QuestionLikeView(GenericAPIView):
             200: {"description": "按讚操作成功"},
             404: {"description": "問題不存在"},
         },
-        description="按讚/取消按讚問題",
+        summary="按讚/取消按讚問題",
         tags=["Questions"],
     )
     def post(self, request, question_id=None):
@@ -177,7 +171,7 @@ class QuestionViewView(GenericAPIView):
             400: BaseErrorSerializer,
             404: BaseErrorSerializer,
         },
-        description="更新問題瀏覽次數",
+        summary="更新問題瀏覽次數",
         tags=["Questions"],
     )
     def post(self, request, question_id=None):

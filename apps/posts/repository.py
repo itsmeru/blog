@@ -34,12 +34,12 @@ class PostRepository:
 
     @staticmethod
     def create_post(title, content, author, tags="", image_file=None):
-        return Post.create_post_with_image(
+        return Post.objects.create(
             title=title,
             content=content,
             author=author,
             tags=tags,
-            image_file=image_file,
+            image=image_file,
         )
 
     @staticmethod

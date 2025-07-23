@@ -12,14 +12,12 @@ class PostService:
             data=data, context={"request": {"user": user}}
         )
         serializer.is_valid(raise_exception=True)
-
-        image_file = serializer.validated_data.get("image")
         post = cls.repository_class.create_post(
             title=serializer.validated_data["title"],
             content=serializer.validated_data["content"],
             author=user,
             tags=serializer.validated_data.get("tags", ""),
-            image_file=image_file,
+            image_file=serializer.validated_data.get("image"),
         )
         return post
 
@@ -38,18 +36,17 @@ class PostService:
         return post
 
     @classmethod
-    def update_post(cls, post_id, user, data, partial=False):
+    def update_post(cls, post_id, user, data, partial=False, files=None):
         post = cls.repository_class.get_by_id(post_id)
         if not post:
             raise NotFound("貼文不存在")
         if post.author != user:
             raise PermissionDenied("您沒有權限修改此貼文")
-
-        # 處理圖片檔案
-        image_file = data.get("image")
-        if image_file:
-            data["image"] = image_file
-
+        # 直接將 image 欄位設為檔案物件
+        if files and 'image' in files:
+            data['image'] = files['image']
+        elif 'image' in data and data['image'] is None:
+            data['image'] = None
         post = cls.repository_class.update_post(post, data, partial=partial)
         return post
 
