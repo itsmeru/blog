@@ -1,7 +1,7 @@
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from apps.rbac.user_permissions_service import UserPermissionService
+from apps.rbac.services.user_permissions_service import UserPermissionService
 
 
 class IsRBACAllowed(BasePermission):

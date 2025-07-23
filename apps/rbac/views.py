@@ -20,8 +20,8 @@ from .serializers import (
     RoleUsersDetailSerializer,
     RoleUsersUpdateSerializer,
 )
-from .role_service import RoleService
-from .permission_service import PermissionService
+from apps.rbac.services.role_service import RoleService
+from apps.rbac.services.permission_service import PermissionService
 
 
 # 權限列表與建立
