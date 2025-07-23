@@ -244,14 +244,14 @@ class UserDetailView(APIView):
             user, stage=stage, enabled=enabled
         )
 
-        # 準備序列化數據
+
         user_data = {
             "id": user.id,
             "nickname": user.nickname,
             "department": user.department,
             "username": user.username,
             "email": user.email,
-            "is_active": user.is_active,  # 加入使用者啟用狀態
+            "is_active": user.is_active,
             "roles": [
                 {"id": role.id, "name": role.name, "name_zh": role.name_zh}
                 for role in user.roles.all()

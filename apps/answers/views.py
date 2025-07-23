@@ -135,6 +135,7 @@ class AnswerDetailView(GenericAPIView):
 )
 class AnswerLikeView(GenericAPIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = (FormParser,)
 
     def post(self, request, answer_id=None):
         answer, is_liked = AnswerService.toggle_like(answer_id, request.user)

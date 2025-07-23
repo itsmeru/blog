@@ -2,6 +2,7 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from drf_spectacular.types import OpenApiTypes
 from .models import Post
+from core.app.base.serializer import SuccessSerializer
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -47,12 +48,9 @@ class PostCreateSerializer(serializers.ModelSerializer):
         
         return value
     
-    def create(self, validated_data):
-        image_file = validated_data.pop('image', None)
-        return Post.create_post_with_image(
-            title=validated_data['title'],
-            content=validated_data['content'],
-            author=self.context['request'].user,
-            tags=validated_data.get('tags', ''),
-            image_file=image_file
-        ) 
+
+PostSuccessResponseSerializer = SuccessSerializer(
+    PostSerializer(), "PostSuccessResponseSerializer")
+
+PostListResponseSerializer = SuccessSerializer(
+    PostSerializer(), "PostListResponseSerializer") 

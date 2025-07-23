@@ -2,53 +2,61 @@ from rest_framework import status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import FormParser
 from drf_spectacular.utils import extend_schema
 
-from apps.posts.models import Post
-from apps.posts.serializers import PostSerializer, PostCreateSerializer
-
-
-
-@extend_schema(
-    tags=["Posts"],
-    request=PostCreateSerializer,
-    responses=PostSerializer,
-    description="建立貼文"
+from apps.posts.serializers import (
+    PostSerializer, 
+    PostCreateSerializer,
+    PostSuccessResponseSerializer,
+    PostListResponseSerializer
 )
-class PostListView(GenericAPIView):
+from apps.posts.service import PostService
+from core.app.base.serializer import BaseErrorSerializer, DeleteSuccessSerializer
+
+class PostCreateListView(GenericAPIView):
     parser_classes = (FormParser,)
+
     def get_permissions(self):
         if self.request.method == 'GET':
             return [AllowAny()]
         return [IsAuthenticated()]
 
+    @extend_schema(
+    responses={
+        200: PostListResponseSerializer,
+        400: BaseErrorSerializer,
+    },
+    description="取得所有貼文",
+    tags=["Posts"]
+)
     def get(self, request):
-        posts = Post.objects.all().order_by('-created_at')
+        posts = PostService.list_posts()
         serializer = PostSerializer(posts, many=True, context={'request': request})
-        return Response(serializer.data)
-
+        return Response({
+            "success": True,
+            "message": "查詢成功",
+            "data": serializer.data
+        })
+    
     @extend_schema(
         request=PostCreateSerializer,
-        responses=PostSerializer,
-        description="建立貼文"
+        responses={
+            201: PostSuccessResponseSerializer,
+            400: BaseErrorSerializer,
+        },
+        description="建立貼文",
+        tags=["Posts"]
     )
     def post(self, request):
-        serializer = PostCreateSerializer(data=request.data, context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        post = serializer.save()
+        post = PostService.create_post(request.data, request.user)
         return Response({
+            "success": True,
             "message": "貼文建立成功",
-            "post_id": post.id
+            "data": PostSerializer(post).data
         }, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(
-    tags=["Posts"],
-    request=PostCreateSerializer,
-    responses=PostSerializer,
-    description="查詢/更新/刪除單一貼文"
-)
 class PostDetailView(GenericAPIView):
     parser_classes = (FormParser,)
 
@@ -57,55 +65,73 @@ class PostDetailView(GenericAPIView):
             return [AllowAny()]
         return [IsAuthenticated()]
 
+    @extend_schema(
+        request=PostCreateSerializer,
+        responses={
+            200: PostSuccessResponseSerializer,
+            400: BaseErrorSerializer,
+            403: BaseErrorSerializer,
+            404: BaseErrorSerializer,
+        },
+        description="查詢貼文", 
+        tags=["Posts"]
+    )
     def get(self, request, post_id=None):
-        try:
-            post = Post.objects.get(id=post_id)
-            serializer = PostSerializer(post, context={'request': request})
-            return Response(serializer.data)
-        except Post.DoesNotExist:
-            return Response({"message": "貼文不存在"}, status=status.HTTP_404_NOT_FOUND)
+        post = PostService.get_post(post_id)
+        return Response({
+            "success": True,
+            "message": "查詢成功",
+            "data": PostSerializer(post).data
+        })
 
     @extend_schema(
         request=PostCreateSerializer,
-        responses=PostSerializer,
-        description="修改貼文"
+        responses={
+            200: PostSuccessResponseSerializer,
+            400: BaseErrorSerializer,
+            403: BaseErrorSerializer,
+            404: BaseErrorSerializer,
+        },
+        description="部分更新貼文",
+        tags=["Posts"]
     )
     def patch(self, request, post_id=None):
-        try:
-            post = Post.objects.get(id=post_id)
-            if post.author != request.user:
-                return Response({"message": "您沒有權限修改此貼文"}, status=status.HTTP_403_FORBIDDEN)
-            serializer = PostCreateSerializer(post, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({"message": "貼文部分更新成功"}, status=status.HTTP_200_OK)
-        except Post.DoesNotExist:
-            return Response({"message": "貼文不存在"}, status=status.HTTP_404_NOT_FOUND)
+        post = PostService.update_post(post_id, request.user, request.data, partial=True)
+        return Response({
+            "success": True,
+            "message": "貼文部分更新成功",
+            "data": PostSerializer(post).data
+        })
 
     @extend_schema(
         request=PostCreateSerializer,
-        responses=PostSerializer,
-        description="修改貼文"
+        responses={
+            200: PostSuccessResponseSerializer,
+            400: BaseErrorSerializer,
+            403: BaseErrorSerializer,
+            404: BaseErrorSerializer,
+        },
+        description="全量更新貼文",
+        tags=["Posts"]
     )
     def put(self, request, post_id=None):
-        try:
-            post = Post.objects.get(id=post_id)
-            if post.author != request.user:
-                return Response({"message": "您沒有權限修改此貼文"}, status=status.HTTP_403_FORBIDDEN)
-            serializer = PostCreateSerializer(post, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({"message": "貼文全量更新成功"}, status=status.HTTP_200_OK)
-        except Post.DoesNotExist:
-            return Response({"message": "貼文不存在"}, status=status.HTTP_404_NOT_FOUND)
+        post = PostService.update_post(post_id, request.user, request.data, partial=False)
+        return Response({
+            "success": True,
+            "message": "貼文全量更新成功",
+            "data": PostSerializer(post).data
+        })
 
+    @extend_schema(
+        responses={
+            204: DeleteSuccessSerializer,
+            403: BaseErrorSerializer,
+            404: BaseErrorSerializer,
+        },
+        description="刪除貼文",
+        tags=["Posts"]
+    )
     def delete(self, request, post_id=None):
-        try:
-            post = Post.objects.get(id=post_id)
-            if post.author != request.user:
-                return Response({"message": "您沒有權限刪除此貼文"}, status=status.HTTP_403_FORBIDDEN)
-            post.delete()
-            return Response({"message": "貼文刪除成功"}, status=status.HTTP_200_OK)
-        except Post.DoesNotExist:
-            return Response({"message": "貼文不存在"}, status=status.HTTP_404_NOT_FOUND)
+        PostService.delete_post(post_id, request.user)
+        return Response()
     
