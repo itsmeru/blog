@@ -118,18 +118,31 @@ class QuestionDetailView(GenericAPIView):
 class QuestionLikeView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={
+            200: {"description": "按讚操作成功"},
+            404: {"description": "問題不存在"},
+        },
+        description="按讚/取消按讚問題",
+        tags=["Questions"]
+    )
     def post(self, request, question_id=None):
         try:
             question = Question.objects.get(id=question_id)
             is_liked = question.toggle_like(request.user)
             return Response({
+                "success": True,
                 "message": "操作成功",
-                "is_liked": is_liked,
-                "likes": question.likes
+                "data": {
+                    "is_liked": is_liked,
+                    "likes": question.likes
+                }
             }, status=status.HTTP_200_OK)
         except Question.DoesNotExist:
             return Response({
-                "message": "問題不存在"
+                "success": False,
+                "message": "問題不存在",
+                "data": {}
             }, status=status.HTTP_404_NOT_FOUND)
 
 

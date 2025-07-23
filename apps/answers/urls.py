@@ -1,10 +1,10 @@
 from django.urls import path
-from .views import AnswerListView, AnswerDetailView, AnswerLikeView
+from .views import AnswerCreateView, AnswerDetailView, AnswerLikeView
 
 app_name = "answers"
 
 urlpatterns = [
-    path('', AnswerListView.as_view(), name='answer_list'),
+    path('', AnswerCreateView.as_view(), name='answer_create'),
     path('<int:answer_id>/', AnswerDetailView.as_view(), name='answer_detail'),
-    path('<int:pk>/like/', AnswerLikeView.as_view(), name='answer_like'),
+    path('<int:answer_id>/like/', AnswerLikeView.as_view(), name='answer_like'),
 ]

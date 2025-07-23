@@ -30,9 +30,6 @@ ALLOWED_HOSTS = []
 
 API_VERSION = "v1"
 
-STATICFILES_DIRS = [
-       os.path.join(BASE_DIR, 'static'),
-   ]
 # Application definition
 
 INSTALLED_APPS = [
@@ -51,7 +48,7 @@ INSTALLED_APPS = [
     "apps.posts",
     "apps.questions",
     "apps.answers",
-    "rbac",
+    "apps.rbac",
 ]
 
 MIDDLEWARE = [
@@ -63,7 +60,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "core.app.middleware.rbac_hanlder.RBACMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -95,6 +91,12 @@ DATABASES = {
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }
+
+PASSWORD_HASHERS = [
+       'django.contrib.auth.hashers.Argon2PasswordHasher',
+       'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+       'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+   ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
@@ -133,6 +135,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
+        # "apps.rbac.permissions.IsRBACAllowed",
     ],
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",

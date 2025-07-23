@@ -9,6 +9,7 @@ from django.conf import settings
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.hashers import check_password as django_check_password, make_password
 
 
 class Account(AbstractUser):
@@ -18,28 +19,12 @@ class Account(AbstractUser):
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["email"]
 
-    def set_password(self, password):
-        ph = argon2.PasswordHasher(
-            time_cost=4,
-            memory_cost=65535,
-            parallelism=4,
-            hash_len=32,
-            salt_len=16,
-        )
-        self.password = ph.hash(password)
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+        self._password = raw_password
 
-    def check_password(self, password):
-        ph = argon2.PasswordHasher()
-
-        try:
-            ph.verify(self.password, password)
-        except (
-            argon2.exceptions.VerifyMismatchError,
-            argon2.exceptions.VerificationError,
-        ):
-            return False
-
-        return True
+    def check_password(self, raw_password):
+        return django_check_password(raw_password, self.password)
 
 
 class PasswordResetToken(models.Model):
