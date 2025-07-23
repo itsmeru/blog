@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.parsers import FormParser
+from rest_framework.parsers import FormParser, JSONParser
 from rest_framework.exceptions import ValidationError
 
 from core.app.base.serializer import BaseErrorSerializer
@@ -168,7 +168,7 @@ class ChangePasswordView(GenericAPIView):
 
 class ForgotPasswordView(GenericAPIView):
     permission_classes = [AllowAny]
-    parser_classes = (FormParser,)
+    parser_classes = (FormParser,JSONParser)
 
     @extend_schema(
         request=ForgotPasswordSerializer,
