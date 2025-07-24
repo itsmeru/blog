@@ -103,22 +103,17 @@ class UserPermissionRepository:
         if cached_permissions:
             return Permission.objects.filter(id__in=cached_permissions)
 
-        # 1. 取得所有角色的 is_active 權限
         role_permissions = Permission.objects.filter(
             roles__users=user, is_active=True
         ).distinct()
-        # 2. 加上 enabled_permissions
         enabled_permissions = Permission.objects.filter(
             id__in=user.enabled_permissions, is_active=True
         )
-        # 3. 合併
         all_permissions = set(role_permissions) | set(enabled_permissions)
-        # 4. 移除 disabled_permissions
         if user.disabled_permissions:
             all_permissions = [
                 p for p in all_permissions if p.id not in user.disabled_permissions
             ]
-        # 5. 快取
         cache.set(cache_key, [p.id for p in all_permissions], timeout=3600)
         return Permission.objects.filter(id__in=[p.id for p in all_permissions])
 
