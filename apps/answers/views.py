@@ -150,6 +150,9 @@ class AnswerLikeView(GenericAPIView):
             {
                 "success": True,
                 "message": "操作成功",
-                "data": {"is_liked": is_liked, "likes": answer.likes},
+                "data": {
+                    "is_liked": is_liked,
+                    "likes": answer.likes,
+                },
             }
         )

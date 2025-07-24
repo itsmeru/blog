@@ -23,7 +23,7 @@ class PermissionService:
         permission = cls.repository_class.get_by_id(pk)
         try:
             return cls.repository_class.update(permission, **data)
-        except IntegrityError as e:
+        except IntegrityError:
             raise ValidationError({"code": ["權限代碼已存在，請使用其他 code。"]})
 
     @classmethod

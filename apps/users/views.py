@@ -1,9 +1,7 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.parsers import FormParser, JSONParser
 
 from core.app.base.serializer import BaseErrorSerializer
@@ -39,21 +37,14 @@ class RegisterView(GenericAPIView):
         tags=["Users"],
     )
     def post(self, request, *args, **kwargs):
-        serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = UserService.register_user(
-            email=serializer.validated_data["email"],
-            phone=serializer.validated_data.get("phone"),
-            nickname=serializer.validated_data["nickname"],
-            password=serializer.validated_data["password"],
-        )
+        register_data = UserService.register_user(request.data)
         return Response(
             {
                 "success": True,
-                "message": "註冊成功，請登入",
+                "message": register_data["message"],
                 "data": {
-                    "user_id": user.id,
-                    "nickname": user.nickname,
+                    "user_id": register_data["user"].id,
+                    "nickname": register_data["user"].nickname,
                 },
             },
             status=201,
@@ -74,34 +65,25 @@ class LoginView(GenericAPIView):
         tags=["Users"],
     )
     def post(self, request):
-        serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = UserService.authenticate(
-            account=serializer.validated_data["account"],
-            password=serializer.validated_data["password"],
-        )
-        refresh = RefreshToken.for_user(user)
-
+        login_data = UserService.login_user(request.data)
         response = Response(
             {
                 "success": True,
-                "message": "登入成功",
+                "message": login_data["message"],
                 "data": {
-                    "access": str(refresh.access_token),
-                    "user_id": user.id,
-                    "nickname": user.nickname,
+                    "access": login_data["access"],
+                    "user_id": login_data["user"].id,
+                    "nickname": login_data["user"].nickname,
                 },
             }
         )
-
         response.set_cookie(
             "refresh_token",
-            str(refresh),
+            login_data["refresh"],
             httponly=True,
             samesite="Lax",
             max_age=60 * 60 * 24 * 7,
         )
-
         return response
 
 
@@ -117,8 +99,14 @@ class LogoutView(GenericAPIView):
         tags=["Users"],
     )
     def post(self, request):
+        logout_data = UserService.logout_user()
         response = Response(
-            {"success": True, "message": "登出成功", "data": {}}, status=204
+            {
+                "success": True,
+                "message": logout_data["message"],
+                "data": {},
+            },
+            status=204,
         )
         response.delete_cookie("refresh_token", path="/")
         return response
@@ -138,24 +126,11 @@ class ChangePasswordView(GenericAPIView):
         tags=["Users"],
     )
     def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = request.user
-        old_password = serializer.validated_data["old_password"]
-        new_password = serializer.validated_data["new_password"]
-
-        if not user.check_password(old_password):
-            return Response(
-                {"success": False, "message": "舊密碼錯誤", "data": {}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        user.set_password(new_password)
-        user.save()
+        change_data = UserService.change_password(request.user, request.data)
         response = Response(
             {
                 "success": True,
-                "message": "密碼更改成功，請重新登入",
+                "message": change_data["message"],
                 "data": {"require_relogin": True},
             }
         )
@@ -177,15 +152,11 @@ class ForgotPasswordView(GenericAPIView):
         tags=["Users"],
     )
     def post(self, request):
-        serializer = ForgotPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
-
-        reset_data = UserService.forgot_password(email)
+        forgot_data = UserService.forgot_password(request.data)
         return Response(
             {
                 "success": True,
-                "message": f"驗證碼已發送到 {email}，請檢查您的郵箱",
+                "message": forgot_data["message"],
                 "data": {},
             }
         )
@@ -206,16 +177,13 @@ class ResetPasswordView(GenericAPIView):
         tags=["Users"],
     )
     def post(self, request):
-        serializer = ResetPasswordSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        email = serializer.validated_data["email"]
-        verification_code = serializer.validated_data["verification_code"]
-        new_password = serializer.validated_data["new_password"]
-
-        UserService.reset_password(email, verification_code, new_password)
+        reset_data = UserService.reset_password(request.data)
         return Response(
-            {"success": True, "message": "密碼重置成功，請使用新密碼登入", "data": {}}
+            {
+                "success": True,
+                "message": reset_data["message"],
+                "data": {},
+            }
         )
 
 
@@ -232,18 +200,12 @@ class RefreshTokenView(GenericAPIView):
     )
     def post(self, request):
         refresh_token = request.COOKIES.get("refresh_token")
-        if not refresh_token:
-            return Response(
-                {"success": False, "message": "未找到 refresh token", "data": {}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        data = UserService.refresh_token(refresh_token)
+        data = UserService.validate_refresh_token(refresh_token)
 
         response = Response(
             {
                 "success": True,
-                "message": "Token 刷新成功",
+                "message": data["message"],
                 "data": {"access": data["access"]},
             }
         )
