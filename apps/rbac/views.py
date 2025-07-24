@@ -19,12 +19,12 @@ from .serializers import (
     BaseSuccessResponseSerializer,
     RoleUsersDetailSerializer,
     RoleUsersUpdateSerializer,
+    PermissionBatchUpdateSerializer,
 )
 from apps.rbac.services.role_service import RoleService
 from apps.rbac.services.permission_service import PermissionService
 
 
-# 權限列表與建立
 class PermissionCreateListView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
@@ -128,18 +128,17 @@ class PermissionBatchUpdateView(GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        request=None,
+        request=PermissionBatchUpdateSerializer,
         responses={
             200: BaseSuccessResponseSerializer,
             401: BaseErrorSerializer,
         },
-        summary="批次更新權限啟用狀態",
         tags=["RBAC: Permission"],
     )
     def patch(self, request):
-        ids = request.data.get("ids", [])
+        permission_ids = request.data.get("permission_ids", [])
         is_active = request.data.get("is_active", True)
-        count = PermissionService.batch_update_permissions(ids, is_active)
+        count = PermissionService.batch_update_permissions(permission_ids, is_active)
         return Response(
             {
                 "success": True,

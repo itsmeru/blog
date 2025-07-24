@@ -1,4 +1,6 @@
 from apps.rbac.repositories import PermissionRepository
+from django.db import IntegrityError
+from rest_framework.exceptions import ValidationError
 
 
 class PermissionService:
@@ -19,7 +21,10 @@ class PermissionService:
     @classmethod
     def update_permission(cls, pk, data):
         permission = cls.repository_class.get_by_id(pk)
-        return cls.repository_class.update(permission, **data)
+        try:
+            return cls.repository_class.update(permission, **data)
+        except IntegrityError as e:
+            raise ValidationError({"code": ["權限代碼已存在，請使用其他 code。"]})
 
     @classmethod
     def delete_permission(cls, pk):

@@ -77,6 +77,13 @@ class RoleUsersUpdateSerializer(serializers.Serializer):
     )
 
 
+class PermissionBatchUpdateSerializer(serializers.Serializer):
+    permission_ids = serializers.ListField(
+        child=serializers.IntegerField(), help_text="權限ID列表", allow_empty=True
+    )
+    is_active = serializers.BooleanField(help_text="啟用狀態")
+
+
 PermissionListResponseSerializer = SuccessSerializer(
     PermissionSerializer(many=True), "PermissionListResponseSerializer"
 )
